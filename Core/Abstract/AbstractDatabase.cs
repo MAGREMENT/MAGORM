@@ -2,7 +2,16 @@
 
 public abstract class AbstractDatabase
 {
+    private readonly IQueryBuilder _queryBuilder;
+    private readonly DatabaseEngine _engine;
+    
     private readonly Dictionary<string, Dictionary<object, IRecord>> _dirty = new();
+
+    protected AbstractDatabase(IQueryBuilder queryBuilder, DatabaseEngine engine)
+    {
+        _queryBuilder = queryBuilder;
+        _engine = engine;
+    }
 
     public void AddToDirty(AbstractModel model, IRecord record)
     {

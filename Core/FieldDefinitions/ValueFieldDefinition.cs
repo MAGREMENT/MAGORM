@@ -15,7 +15,7 @@ public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsO
 
     public IReadOnlyList<string> DependsOn => [];
 
-    public bool TryFetchValue<T>(string? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
+    public bool TryFetchValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
     {
         if (value is null || !TryConvert(value, out var r))
         {
@@ -27,5 +27,5 @@ public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsO
         return true;
     }
 
-    protected abstract bool TryConvert(string value, out TType result);
+    protected abstract bool TryConvert(object value, out TType result);
 }

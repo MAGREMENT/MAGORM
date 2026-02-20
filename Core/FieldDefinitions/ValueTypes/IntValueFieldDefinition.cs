@@ -7,8 +7,15 @@ public class IntValueFieldDefinition(string name, FieldDefinitionsOptions option
 {
     public override DBFieldType GetFieldType() => DBFieldType.INT;
 
-    protected override bool TryConvert(string value, out int result)
+    protected override bool TryConvert(object value, out int result)
     {
-        return int.TryParse(value, out result);
+        if (value is int i)
+        {
+            result = i;
+            return true;
+        }
+
+        result = 0;
+        return false;
     }
 }

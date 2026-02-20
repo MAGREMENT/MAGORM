@@ -7,9 +7,15 @@ public class StringValueFieldDefinition(string name, FieldDefinitionsOptions opt
 {
     public override DBFieldType GetFieldType() => DBFieldType.VARCHAR;
 
-    protected override bool TryConvert(string value, out string result)
+    protected override bool TryConvert(object value, out string result)
     {
-        result = value;
-        return true;
+        if (value is string i)
+        {
+            result = i;
+            return true;
+        }
+
+        result = string.Empty;
+        return false;
     }
 }

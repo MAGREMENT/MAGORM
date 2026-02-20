@@ -20,7 +20,7 @@ public class ComputedFieldDefinition<TType>(string name, TryCompute<TType, IReco
 
     public IReadOnlyList<string> DependsOn { get; } = dependsOn;
 
-    public bool TryFetchValue<T>(string? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
+    public bool TryFetchValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
     {
         if (!_tryCompute(record, out var r))
         {

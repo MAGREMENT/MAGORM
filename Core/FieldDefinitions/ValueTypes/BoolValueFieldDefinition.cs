@@ -7,27 +7,21 @@ public class BoolValueFieldDefinition(string name, FieldDefinitionsOptions optio
 {
     public override DBFieldType GetFieldType() => DBFieldType.BOOL;
 
-    protected override bool TryConvert(string value, out bool result)
+    protected override bool TryConvert(object value, out bool result)
     {
-        switch (value)
+        if (value is bool b)
         {
-            case "true":
-            case "True":
-                result = true;
-                return true;
-            case "false":
-            case "False":
-                result = false;
-                return true;
-            default:
-                if (!int.TryParse(value, out var i))
-                {
-                    result = false;
-                    return false;
-                }
-
-                result = i != 0;
-                return true;
+            result = b;
+            return true;
         }
+
+        if (value is int i)
+        {
+            result = i != 0;
+            return true;
+        }
+
+        result = false;
+        return false;
     }
 }

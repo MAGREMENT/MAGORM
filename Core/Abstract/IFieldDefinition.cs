@@ -10,7 +10,7 @@ public interface IFieldDefinition : IDependencies
 
     public bool IsStored();
     
-    public bool TryFetchValue<T>(string? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord; 
+    public bool TryFetchValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord; 
 }
 
 public record FieldDefinitionsOptions(bool Required = false, 

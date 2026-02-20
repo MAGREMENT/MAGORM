@@ -15,7 +15,7 @@ public abstract class AbstractModel : INamed
         return _selectFieldDefinitions;
     }
     
-    public ModelSpecification GenerateModelSpecification()
+    public CreateSpecification GenerateCreateSpecification()
     {
         var fields = GetAllFieldDefinitions();
         var fieldSpecifications = new FieldSpecification[fields.Count];
@@ -28,7 +28,7 @@ public abstract class AbstractModel : INamed
                 f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
         }
 
-        return new ModelSpecification(Name,
+        return new CreateSpecification(Name,
             fieldSpecifications, 
             new PrimaryKeySpecification(GetPrimaryKey().Name),
             fkSpecifications);
@@ -45,20 +45,9 @@ public abstract class AbstractModel : INamed
     }
 }
 
-public record FieldSpecification(string Name, DBFieldType FieldType, bool Unique, bool Required, bool AutoIncrement);
-
-public record PrimaryKeySpecification(params string[] Names);
-
-public record ForeignKeySpecification(string Field, string OtherModel, string OtherField);
-
-public record ModelSpecification(string Name,
-    IReadOnlyList<FieldSpecification> Fields,
-    PrimaryKeySpecification PrimaryKey,
-    IReadOnlyList<ForeignKeySpecification> ForeignKeys);
-
 public abstract class AbstractModel<T> : AbstractModel where T : IRecord
 {
-    internal T[] GenerateRecordsFromSelect(ISelectQueryResult query)
+    internal T[] GenerateRecordsFromSelect(IQueryResult query)
     {
         var result = CreateRecordArray(query.Length);
         var definitions = GetFieldDefinitionsForSelect();
@@ -80,13 +69,6 @@ public abstract class AbstractModel<T> : AbstractModel where T : IRecord
     }
 
     protected abstract T[] CreateRecordArray(int length);
-}
-
-public interface ISelectQueryResult : IKeyValue<string, string>
-{
-    public int Length { get; }
-
-    public void Next();
 }
 
 public abstract class TrackedAbstractModel<T> : AbstractModel<T>, ITrackingContext where T : TrackableRecord, new()

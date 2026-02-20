@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{40BAEFFD-1831-429A-942C-1E8F50BD5313}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADO.NET.MYSQL", "ADO.NET.MYSQL\ADO.NET.MYSQL.csproj", "{6911DBF2-E808-43C3-A316-1FAB96B177C5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{40BAEFFD-1831-429A-942C-1E8F50BD5313}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{40BAEFFD-1831-429A-942C-1E8F50BD5313}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{40BAEFFD-1831-429A-942C-1E8F50BD5313}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6911DBF2-E808-43C3-A316-1FAB96B177C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6911DBF2-E808-43C3-A316-1FAB96B177C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6911DBF2-E808-43C3-A316-1FAB96B177C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6911DBF2-E808-43C3-A316-1FAB96B177C5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
