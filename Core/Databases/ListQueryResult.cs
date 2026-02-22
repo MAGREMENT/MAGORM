@@ -4,7 +4,7 @@ namespace Core.Databases;
 
 public class ListQueryResult : IQueryResult
 {
-    private readonly List<DictionaryList<string, object?>> _values;
+    private readonly List<DictionaryList<string, object?>> _values = new();
     private int _curr = -1;
 
     public int Length => _values.Count;
@@ -41,7 +41,7 @@ public class ListQueryResult : IQueryResult
     }
 }
 
-public class DictionaryList<TKey, TValue> : IKeyValue<TKey, TValue>, IKeyValue<int, TValue> 
+public class DictionaryList<TKey, TValue> : IKeyValue<TKey, TValue>
     where TKey : notnull
 {
     private readonly Dictionary<TKey, int> _dic = new();

@@ -21,6 +21,12 @@ public class MySqlDatabaseEngine(string connectionString) : CommonDatabaseEngine
     {
         return new MySqlTransactionWrapper(CreateConnection());
     }
+
+    public override IReadOnlyList<ModelSpecification> GetModelSchemas()
+    {
+        //TODO with var schema = connection.GetSchema("Tables");
+        throw new NotImplementedException();
+    }
 }
 
 public class MySqlTransactionWrapper : CommonTransaction<MySqlConnection>

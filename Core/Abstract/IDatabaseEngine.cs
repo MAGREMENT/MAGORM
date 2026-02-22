@@ -22,5 +22,7 @@ public interface ITransaction : IQueryExecutor
 public interface IDatabaseEngine : IQueryExecutor
 {
     public ITransaction CreateTransaction();
+
+    public IReadOnlyList<ModelSpecification> GetModelSchemas();
 }
 

@@ -3,7 +3,7 @@ using Core.Abstract;
 
 namespace Core.FieldDefinitions;
 
-public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsOptions options) : IFieldDefinition
+public abstract class ValueFieldDefinition(string name, FieldDefinitionsOptions options) : IFieldDefinition
 {
     public string Name { get; } = name;
 
@@ -19,17 +19,9 @@ public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsO
 
     public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
     {
-        if (value is null || !TryConvert(value, out var r))
-        {
-            result = null;
-            return false;
-        }
-
-        result = r!;
+        result = value!;
         return true;
     }
-
-    protected abstract bool TryConvert(object value, out TType result);
     
     public void AttachToDatabase(Database database) { }
 }

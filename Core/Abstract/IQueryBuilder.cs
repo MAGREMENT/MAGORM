@@ -2,7 +2,7 @@
 
 public interface IQueryBuilder
 {
-    Query Create(CreateSpecification specification);
+    Query Create(ModelSpecification specification);
 
     Query Insert(InsertSpecification specification);
 
@@ -25,7 +25,7 @@ public record PrimaryKeySpecification(params string[] Names);
 
 public record ForeignKeySpecification(string Field, string OtherModel, string OtherField);
 
-public record CreateSpecification(string Model,
+public record ModelSpecification(string Model,
     IReadOnlyList<FieldSpecification> Fields,
     PrimaryKeySpecification PrimaryKey,
     IReadOnlyList<ForeignKeySpecification> ForeignKeys);

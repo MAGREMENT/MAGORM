@@ -7,11 +7,33 @@ public class Database
     private readonly IModelBank _modelBank;
     private readonly DirtyCollection _dirty = new();
 
-    protected Database(IQueryBuilder queryBuilder, IDatabaseEngine engine, IModelBank modelBank)
+    public Database(IQueryBuilder queryBuilder, IDatabaseEngine engine, IModelBank modelBank)
     {
         _queryBuilder = queryBuilder;
         _engine = engine;
         _modelBank = modelBank;
+    }
+
+    public void AddModels(params Model[] models) => AddModels((IEnumerable<Model>) models);
+
+    public void AddModels(IEnumerable<Model> models)
+    {
+        _modelBank.AddModels(models);
+        foreach (var model in models)
+        {
+            model.AttachToDatabase(this);
+        }
+    }
+
+    public void Sync()
+    {
+        var currentSpecifications = _engine.GetModelSchemas();
+        var desiredSpecifications = new List<ModelSpecification>();
+
+        foreach (var m in _modelBank)
+        {
+            desiredSpecifications.Add(m.GenerateSpecification());
+        }
     }
 
     public Model? GetModel<TModel>() => _modelBank.GetModel<TModel>();
@@ -40,10 +62,4 @@ public class DirtyCollection : Dictionary<string, Dictionary<object, IRecord>>, 
 
         dic.TryAdd(record.GetFieldValue(model.GetPrimaryKey().Name), record);
     }
-}
-
-public interface IModelBank
-{
-    Model? GetModel<TModel>();
-    Model? GetModel(string name);
 }

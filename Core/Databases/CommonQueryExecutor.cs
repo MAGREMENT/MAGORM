@@ -95,6 +95,8 @@ public abstract class CommonDatabaseEngine<T>
     protected override bool ShouldDisposeOfConnection => true;
     
     public abstract ITransaction CreateTransaction();
+
+    public abstract IReadOnlyList<ModelSpecification> GetModelSchemas();
 }
 
 public abstract class CommonTransaction<TConnection>(TConnection connection) 

@@ -4,14 +4,13 @@ namespace Core.Abstract;
 
 public abstract class Model : INamed, IDatabaseAttachable
 {
-    private IReadOnlyList<IFieldDefinition>? _allFieldDefinitions;
     private IReadOnlyList<IFieldDefinition>? _selectFieldDefinitions;
     
     public abstract string Name { get; }
     
     public virtual void AttachToDatabase(Database database)
     {
-        foreach (var field in GetAllFieldDefinitions())
+        foreach (var field in AllFieldDefinitions)
         {
             field.AttachToDatabase(database);
         }
@@ -19,22 +18,21 @@ public abstract class Model : INamed, IDatabaseAttachable
     
     public IReadOnlyList<IFieldDefinition> GetFieldDefinitionsForSelect()
     {
-        _selectFieldDefinitions ??= DependencyResolutionAlgorithms.Best(GetAllFieldDefinitions());
+        _selectFieldDefinitions ??= DependencyResolutionAlgorithms.Best(AllFieldDefinitions);
         return _selectFieldDefinitions;
     }
     
-    public CreateSpecification GenerateCreateSpecification(Database database)
+    public ModelSpecification GenerateSpecification()
     {
-        var fields = GetAllFieldDefinitions();
-        var fieldSpecifications = new FieldSpecification[fields.Count];
+        var fieldSpecifications = new FieldSpecification[AllFieldDefinitions.Count];
         var fkSpecifications = new List<ForeignKeySpecification>();
-        
-        for (int i = 0; i < fieldSpecifications.Length; i++)
+
+        var i = 0;
+        foreach(var f in AllFieldDefinitions)
         {
-            var f = fields[i];
             if(!f.IsStored()) continue;
             
-            fieldSpecifications[i] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
+            fieldSpecifications[i++] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
                 f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
 
             foreach (var reference in f.References)
@@ -43,7 +41,7 @@ public abstract class Model : INamed, IDatabaseAttachable
             }
         }
 
-        return new CreateSpecification(Name,
+        return new ModelSpecification(Name,
             fieldSpecifications, 
             new PrimaryKeySpecification(GetPrimaryKey().Name),
             fkSpecifications);
@@ -53,7 +51,7 @@ public abstract class Model : INamed, IDatabaseAttachable
 
     public abstract IFieldDefinition? GetFieldDefinition(string name);
     
-    protected abstract IReadOnlyList<IFieldDefinition> AdditionalFieldDefinitions { get; }
+    protected abstract IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
     
     public T[] GenerateRecordsFromSelect<T>(IQueryResult query) where T : IRecord
     {
@@ -77,10 +75,4 @@ public abstract class Model : INamed, IDatabaseAttachable
     }
 
     protected abstract T[] CreateRecordArray<T>(int length) where T : IRecord; //TODO move elsewhere
-
-    private IReadOnlyList<IFieldDefinition> GetAllFieldDefinitions()
-    {
-        _allFieldDefinitions ??= AdditionalFieldDefinitions.With(GetPrimaryKey());
-        return _allFieldDefinitions;
-    }
 }

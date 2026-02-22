@@ -5,7 +5,7 @@ namespace Core.Databases;
 
 public abstract class BaseSqlQueryBuilder : IQueryBuilder
 {
-    public Query Create(CreateSpecification specification)
+    public Query Create(ModelSpecification specification)
     {
         var builder = new StringBuilder();
 

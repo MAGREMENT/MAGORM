@@ -4,10 +4,10 @@ namespace Core.Util;
 
 public static class DependencyResolutionAlgorithms
 {
-    public static T[] Best<T>(IReadOnlyList<T> dependencies) where T : IDependencies
+    public static T[] Best<T>(IReadOnlyCollection<T> dependencies) where T : IDependencies
         => ResolveMultiPass(dependencies);
 
-    public static T[] ResolveMultiPass<T>(IReadOnlyList<T> dependencies) where T : IDependencies
+    public static T[] ResolveMultiPass<T>(IReadOnlyCollection<T> dependencies) where T : IDependencies
     {
         var result = new T[dependencies.Count];
         var resultIndex = 0;
