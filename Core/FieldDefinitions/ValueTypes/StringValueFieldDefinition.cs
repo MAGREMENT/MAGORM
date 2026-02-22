@@ -5,7 +5,7 @@ namespace Core.FieldDefinitions.ValueTypes;
 public class StringValueFieldDefinition(string name, FieldDefinitionsOptions options) 
     : ValueFieldDefinition<string>(name, options)
 {
-    public override DBFieldType GetFieldType() => DBFieldType.VARCHAR;
+    public override DBFieldType GetFieldType() => DBFieldType.STRING;
 
     protected override bool TryConvert(object value, out string result)
     {

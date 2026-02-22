@@ -73,7 +73,7 @@ public abstract class AbstractModel<T> : AbstractModel where T : IRecord
 
 public abstract class TrackedAbstractModel<T> : AbstractModel<T>, ITrackingContext where T : TrackableRecord, new()
 {
-    internal AbstractDatabase? Database { get; set; }
+    internal Database? Database { get; set; }
     
     protected override T[] CreateRecordArray(int length)
     {

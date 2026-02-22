@@ -18,11 +18,11 @@ public record FieldDefinitionsOptions(bool Required = false,
     bool AutoIncrement = false, 
     OnChange<IRecord>? OnChange = null);
 
-public delegate void OnChange<in T>(object oldValue, object newValue, T record, AbstractDatabase db) where T : IRecord;
+public delegate void OnChange<in T>(object oldValue, object newValue, T record, Database db) where T : IRecord;
 
 public enum DBFieldType
 {
-    INT, VARCHAR, BOOL
+    INT, STRING, BOOL
 }
 
 public static class DBFieldTypeExtensions
@@ -31,7 +31,7 @@ public static class DBFieldTypeExtensions
     {
         var type = typeof(T);
         if (type == typeof(int)) return DBFieldType.INT;
-        if (type == typeof(string)) return DBFieldType.VARCHAR;
+        if (type == typeof(string)) return DBFieldType.STRING;
         if (type == typeof(bool)) return DBFieldType.BOOL;
 
         throw new ArgumentOutOfRangeException();

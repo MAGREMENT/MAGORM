@@ -1,16 +1,18 @@
 ﻿namespace Core.Abstract;
 
-public abstract class AbstractDatabase
+public class Database
 {
     private readonly IQueryBuilder _queryBuilder;
-    private readonly DatabaseEngine _engine;
+    private readonly IDatabaseEngine _engine;
+    private readonly IModelBank _modelBank;
     
     private readonly Dictionary<string, Dictionary<object, IRecord>> _dirty = new();
 
-    protected AbstractDatabase(IQueryBuilder queryBuilder, DatabaseEngine engine)
+    protected Database(IQueryBuilder queryBuilder, IDatabaseEngine engine, IModelBank modelBank)
     {
         _queryBuilder = queryBuilder;
         _engine = engine;
+        _modelBank = modelBank;
     }
 
     public void AddToDirty(AbstractModel model, IRecord record)
@@ -23,7 +25,10 @@ public abstract class AbstractDatabase
 
         dic.TryAdd(record.GetFieldValue(model.GetPrimaryKey().Name), record);
     }
-    
-    protected abstract AbstractModel? GetModel<TModel>();
-    protected abstract AbstractModel? GetModel(string name);
+}
+
+public interface IModelBank
+{
+    protected AbstractModel? GetModel<TModel>();
+    protected AbstractModel? GetModel(string name);
 }

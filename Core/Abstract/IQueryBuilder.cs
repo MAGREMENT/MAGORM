@@ -11,7 +11,13 @@ public interface IQueryBuilder
     Query Select(SelectSpecification specification);
 }
 
-public record Query(string String, int ParameterCount);
+public record Query(string String, int ParameterCount)
+{
+    public void CheckParameters(object[] parameters)
+    {
+        if (ParameterCount != parameters.Length) throw new ArgumentException("Wrong parameter count");
+    }
+}
 
 public record FieldSpecification(string Name, DBFieldType FieldType, bool Unique, bool Required, bool AutoIncrement);
 
