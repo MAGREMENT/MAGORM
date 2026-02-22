@@ -5,7 +5,7 @@ namespace Core.FieldDefinitions.ValueTypes;
 public class BoolValueFieldDefinition(string name, FieldDefinitionsOptions options) 
     : ValueFieldDefinition<bool>(name, options)
 {
-    public override DBFieldType GetFieldType() => DBFieldType.BOOL;
+    public override DBFieldType GetDBFieldType() => DBFieldType.BOOL;
 
     protected override bool TryConvert(object value, out bool result)
     {

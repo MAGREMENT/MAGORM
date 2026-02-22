@@ -2,16 +2,20 @@
 
 namespace Core.Abstract;
 
-public interface IFieldDefinition : IDependencies
+public interface IFieldDefinition : IDependencies, IDatabaseAttachable
 {
     public FieldDefinitionsOptions Options { get; }
 
-    public DBFieldType GetFieldType();
+    public DBFieldType GetDBFieldType();
 
     public bool IsStored();
     
-    public bool TryFetchValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord; 
+    public ModelReference[] References { get; }
+    
+    public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord; 
 }
+
+public record ModelReference(string Model, string Field);
 
 public record FieldDefinitionsOptions(bool Required = false, 
     bool Unique = false, 
@@ -30,6 +34,11 @@ public static class DBFieldTypeExtensions
     public static DBFieldType ToDBFieldType<T>()
     {
         var type = typeof(T);
+        return ToDBFieldType(type);
+    }
+
+    public static DBFieldType ToDBFieldType(Type type)
+    {
         if (type == typeof(int)) return DBFieldType.INT;
         if (type == typeof(string)) return DBFieldType.STRING;
         if (type == typeof(bool)) return DBFieldType.BOOL;

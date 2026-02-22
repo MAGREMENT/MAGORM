@@ -2,12 +2,20 @@
 
 namespace Core.Abstract;
 
-public abstract class AbstractModel : INamed
+public abstract class Model : INamed, IDatabaseAttachable
 {
     private IReadOnlyList<IFieldDefinition>? _allFieldDefinitions;
     private IReadOnlyList<IFieldDefinition>? _selectFieldDefinitions;
     
     public abstract string Name { get; }
+    
+    public virtual void AttachToDatabase(Database database)
+    {
+        foreach (var field in GetAllFieldDefinitions())
+        {
+            field.AttachToDatabase(database);
+        }
+    }
     
     public IReadOnlyList<IFieldDefinition> GetFieldDefinitionsForSelect()
     {
@@ -15,7 +23,7 @@ public abstract class AbstractModel : INamed
         return _selectFieldDefinitions;
     }
     
-    public CreateSpecification GenerateCreateSpecification()
+    public CreateSpecification GenerateCreateSpecification(Database database)
     {
         var fields = GetAllFieldDefinitions();
         var fieldSpecifications = new FieldSpecification[fields.Count];
@@ -24,8 +32,15 @@ public abstract class AbstractModel : INamed
         for (int i = 0; i < fieldSpecifications.Length; i++)
         {
             var f = fields[i];
-            fieldSpecifications[i] = new FieldSpecification(f.Name, f.GetFieldType(), 
+            if(!f.IsStored()) continue;
+            
+            fieldSpecifications[i] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
                 f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
+
+            foreach (var reference in f.References)
+            {
+                fkSpecifications.Add(new ForeignKeySpecification(f.Name, reference.Model, reference.Field));
+            }
         }
 
         return new CreateSpecification(Name,
@@ -35,21 +50,14 @@ public abstract class AbstractModel : INamed
     }
     
     public abstract IFieldDefinition GetPrimaryKey();
+
+    public abstract IFieldDefinition? GetFieldDefinition(string name);
     
     protected abstract IReadOnlyList<IFieldDefinition> AdditionalFieldDefinitions { get; }
-
-    private IReadOnlyList<IFieldDefinition> GetAllFieldDefinitions()
+    
+    public T[] GenerateRecordsFromSelect<T>(IQueryResult query) where T : IRecord
     {
-        _allFieldDefinitions ??= AdditionalFieldDefinitions.With(GetPrimaryKey());
-        return _allFieldDefinitions;
-    }
-}
-
-public abstract class AbstractModel<T> : AbstractModel where T : IRecord
-{
-    internal T[] GenerateRecordsFromSelect(IQueryResult query)
-    {
-        var result = CreateRecordArray(query.Length);
+        var result = CreateRecordArray<T>(query.Length);
         var definitions = GetFieldDefinitionsForSelect();
 
         for (int i = 0; i < query.Length; i++)
@@ -59,7 +67,7 @@ public abstract class AbstractModel<T> : AbstractModel where T : IRecord
             foreach (var definition in definitions)
             {
                 var stringValue = query.TryGetValue(definition.Name, out var v) ? v : null;
-                if (!definition.TryFetchValue(stringValue, result[i], out var value)) throw new Exception(); //TODO
+                if (!definition.TryComputeValue(stringValue, result[i], out var value)) throw new Exception(); //TODO
                 
                 result[i].SetFieldValue(definition.Name, value);
             }
@@ -68,29 +76,11 @@ public abstract class AbstractModel<T> : AbstractModel where T : IRecord
         return result;
     }
 
-    protected abstract T[] CreateRecordArray(int length);
-}
+    protected abstract T[] CreateRecordArray<T>(int length) where T : IRecord; //TODO move elsewhere
 
-public abstract class TrackedAbstractModel<T> : AbstractModel<T>, ITrackingContext where T : TrackableRecord, new()
-{
-    internal Database? Database { get; set; }
-    
-    protected override T[] CreateRecordArray(int length)
+    private IReadOnlyList<IFieldDefinition> GetAllFieldDefinitions()
     {
-        var result = new T[length];
-        for (int i = 0; i < length; i++)
-        {
-            result[i].IsTracked = true;
-            result[i].Context = this;
-        }
-
-        return result;
-    }
-
-    public void AddToDirty(IRecord record)
-    {
-        if (Database is null) throw new Exception(); //TODO
-        
-        Database.AddToDirty(this, record);
+        _allFieldDefinitions ??= AdditionalFieldDefinitions.With(GetPrimaryKey());
+        return _allFieldDefinitions;
     }
 }

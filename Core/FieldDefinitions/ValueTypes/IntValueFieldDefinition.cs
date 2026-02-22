@@ -5,7 +5,7 @@ namespace Core.FieldDefinitions.ValueTypes;
 public class IntValueFieldDefinition(string name, FieldDefinitionsOptions options) 
     : ValueFieldDefinition<int>(name, options)
 {
-    public override DBFieldType GetFieldType() => DBFieldType.INT;
+    public override DBFieldType GetDBFieldType() => DBFieldType.INT;
 
     protected override bool TryConvert(object value, out int result)
     {

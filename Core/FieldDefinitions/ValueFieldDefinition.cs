@@ -9,13 +9,15 @@ public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsO
 
     public FieldDefinitionsOptions Options { get; } = options;
 
-    public abstract DBFieldType GetFieldType();
+    public abstract DBFieldType GetDBFieldType();
 
     public bool IsStored() => true;
 
     public IReadOnlyList<string> DependsOn => [];
+    
+    public ModelReference[] References => [];
 
-    public bool TryFetchValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
+    public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
     {
         if (value is null || !TryConvert(value, out var r))
         {
@@ -28,4 +30,6 @@ public abstract class ValueFieldDefinition<TType>(string name, FieldDefinitionsO
     }
 
     protected abstract bool TryConvert(object value, out TType result);
+    
+    public void AttachToDatabase(Database database) { }
 }
