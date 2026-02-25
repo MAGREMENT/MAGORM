@@ -15,6 +15,14 @@ public class SQLiteQueryBuilder : BaseSqlQueryBuilder
         };
     }
 
+    public override bool IsSameDBFieldType(DBFieldType left, DBFieldType right)
+    {
+        if ((left == DBFieldType.BOOL && right == DBFieldType.INT)
+            || (left == DBFieldType.INT && right == DBFieldType.BOOL)) return true;
+        
+        return base.IsSameDBFieldType(left, right);
+    }
+
     protected override string AutoIncrementAttribute => "AUTOINCREMENT";
     
     protected override bool PrimaryAutoIncrementByDefault => true;

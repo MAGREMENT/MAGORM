@@ -25,15 +25,83 @@ public class Database
         }
     }
 
+    public void NoticeDirty(Model model, IRecord record, string field)
+    {
+        _dirty.AddToDirty(model, record, field);
+    }
+
     public void Sync()
     {
-        var currentSpecifications = _engine.GetModelSchemas();
-        var desiredSpecifications = new List<ModelSpecification>();
-
-        foreach (var m in _modelBank)
+        var currentSpecifications = new Dictionary<string, ModelSpecification>();
+        
+        foreach (var s in _engine.GetModelSchemas())
         {
-            desiredSpecifications.Add(m.GenerateSpecification());
+            currentSpecifications.Add(s.Model, s);
         }
+
+        var stacker = new QueryStacker();
+        foreach (var desiredModel in _modelBank)
+        {
+            var desiredSpecification = desiredModel.GenerateSpecification();
+            if (!currentSpecifications.TryGetValue(desiredSpecification.Model, out var currSpecification))
+            {
+                stacker.AddQuery(_queryBuilder.Create(desiredSpecification));
+            }
+            else
+            {
+                //TODO update columns
+            }
+        }
+
+        var transaction = _engine.CreateTransaction();
+        transaction.Execute(stacker.GetQuery(), stacker.GetParameters());
+        transaction.Commit();
+    }
+
+    public void Nuke()
+    {
+        //TODO
+    }
+
+    public TRecord[] CreateRecords<TRecord>(Model model, params Dictionary<string, object>[] values)
+        where TRecord : IRecord, new()
+    {
+        if (GetModel(model.Name) is null) throw new Exception();//TODO
+        
+        var result = new TRecord[values.Length];
+        var stacker = new QueryStacker();
+        var fieldNames = new List<string>();
+        
+        for(int i = 0; i < values.Length; i++)
+        {
+            var val = values[i];
+
+            var record = new TRecord();
+            result[i] = record;
+            
+            foreach (var field in model.AllFieldDefinitions)
+            {
+                if(!field.IsStored()) continue;
+                
+                if (val.TryGetValue(field.Name, out var v))
+                {
+                    if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
+                    
+                    fieldNames.Add(field.Name);
+                    record.SetFieldValue(field.Name, r);
+                    stacker.AddParameter(r);
+                }
+                else if (field.Options.Required) throw new Exception(); //TODO maybe not exception
+            }
+            
+            stacker.AddQuery(_queryBuilder.Insert(new InsertSpecification(model.Name, fieldNames.ToArray())));
+        }
+
+        var transaction = _engine.CreateTransaction();
+        transaction.Execute(stacker.GetQuery(), stacker.GetParameters());
+        transaction.Commit();
+        
+        return result;
     }
 
     public Model? GetModel<TModel>() => _modelBank.GetModel<TModel>();
@@ -45,21 +113,25 @@ public interface IDatabaseAttachable
     void AttachToDatabase(Database database);
 }
 
-public interface IDirtyCollection
-{
-    void AddToDirty(Model model, IRecord record);
-}
+public record RecordChange(IRecord Record, HashSet<string> Fields);
 
-public class DirtyCollection : Dictionary<string, Dictionary<object, IRecord>>, IDirtyCollection
+public class DirtyCollection : Dictionary<string, Dictionary<object, RecordChange>>
 {
-    public void AddToDirty(Model model, IRecord record)
+    public void AddToDirty(Model model, IRecord record, string field)
     {
         if (!TryGetValue(model.Name, out var dic))
         {
-            dic = new Dictionary<object, IRecord>();
+            dic = new Dictionary<object, RecordChange>();
             this[model.Name] = dic;
         }
 
-        dic.TryAdd(record.GetFieldValue(model.GetPrimaryKey().Name), record);
+        var pk = record.GetFieldValue(model.GetPrimaryKey().Name);
+        if(!dic.TryGetValue(pk, out var change))
+        {
+            change = new RecordChange(record, new HashSet<string>());
+            dic[pk] = change;
+        }
+
+        change.Fields.Add(field);
     }
 }

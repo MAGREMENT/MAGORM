@@ -21,31 +21,58 @@ public class SQLiteDatabaseEngine(string connectionString) : CommonDatabaseEngin
 
     public override ITransaction CreateTransaction()
     {
-        return new SQLiteTransactionWrapper(CreateConnection());
+        var con = CreateConnection();
+        con.Open();
+        return new SQLiteTransactionWrapper(con);
     }
 
-    public override IReadOnlyList<ModelSpecification> GetModelSchemas()
+    public override IReadOnlyList<ModelSpecification> GetModelSchemas() //TODO unique & fk contraints
     {
         var result = new List<ModelSpecification>();
+        var fields = new List<FieldSpecification>();
         
         using var con = CreateConnection();
+        con.Open();
         using var cmd = CreateCommand("SELECT name\n" + 
-                                "FROM sqlite_master\n" +
-                                "WHERE type='table AND name NOT LIKE 'sqlite_%';", con);
+                                "FROM sqlite_schema\n" +
+                                "WHERE type = \"table\" AND name NOT LIKE \"sqlite_%\";", con);
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             var name = reader.GetString(0);
+            PrimaryKeySpecification? pk = null;
 
             using var pragmaCon = CreateConnection();
+            pragmaCon.Open();
             using var pragmaCmd = CreateCommand($"PRAGMA table_info({name})", pragmaCon);
 
             using var pragmaReader = pragmaCmd.ExecuteReader();
             while (pragmaReader.Read())
             {
-                var a = 0; //TODO
+                var fieldName = pragmaReader.GetString(pragmaReader.GetOrdinal("name"));
+                if (pragmaReader.GetBoolean(pragmaReader.GetOrdinal("pk")))
+                {
+                    if (pk is not null) throw new Exception(); //TODO
+                    pk = new PrimaryKeySpecification(fieldName);
+                }
+
+                var type = pragmaReader.GetString(pragmaReader.GetOrdinal("type")) switch
+                {
+                    "INTEGER" => DBFieldType.INT,
+                    "TEXT" => DBFieldType.STRING, //TODO handle bools
+                    _ => throw new Exception() //TODO
+                };
+
+                var notNull = pragmaReader.GetBoolean(pragmaReader.GetOrdinal("notnull"));
+                
+                fields.Add(new FieldSpecification(fieldName, type, false, notNull, false));
             }
+
+            if (pk is null) throw new Exception(); //TODO
+            
+            result.Add(new ModelSpecification(name, fields.ToArray(), pk, []));
+            fields.Clear();
         }
         
         return result;

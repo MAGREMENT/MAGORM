@@ -26,10 +26,5 @@ public class DictionaryModel : Model
 
     public override IFieldDefinition? GetFieldDefinition(string name) => _dic.GetValueOrDefault(name, null!);
 
-    protected override IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions => _dic.Values;
-    
-    protected override T[] CreateRecordArray<T>(int length)
-    {
-        throw new NotImplementedException();
-    }
+    public override IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions => _dic.Values;
 }

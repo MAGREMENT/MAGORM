@@ -12,8 +12,9 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         builder.Append($"CREATE TABLE {specification.Model} (\n");
 
         var pkDone = false;
-        foreach (var f in specification.Fields)
+        for(int i = 0; i < specification.Fields.Count; i++)
         {
+            var f = specification.Fields[i];
             builder.Append($"    {f.Name} {TranslateDBFieldType(f.FieldType)}");
 
             if (f.Unique) builder.Append(" UNIQUE");
@@ -32,7 +33,7 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
             }
             if (!ignoreAutoIncrement && f.AutoIncrement) builder.Append(" AUTO_INCREMENT");
             
-            builder.Append(",\n");
+            if(i < specification.Fields.Count - 1) builder.Append(",\n");
         }
 
         if (!pkDone)
@@ -137,6 +138,11 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         builder.Append(';');
         
         return new Query(builder.ToString(), specification.Fields.Length + whereQuery.ParameterCount);
+    }
+
+    public virtual bool IsSameDBFieldType(DBFieldType left, DBFieldType right)
+    {
+        return left == right;
     }
 
     private Query Where(WhereSpecification specification, int currParameterCount)

@@ -1,34 +1,48 @@
 ﻿namespace Core.Abstract;
 
-public abstract class TrackableRecord : IRecord
+public abstract class TrackableRecord : Record
 {
     internal bool IsTracked { get; set; } = false;
-
-    internal ITrackingContext? Context { get; set; } = null;
     
-    public void SetFieldValue(string name, object value)
+    public override void SetFieldValue(string name, object value)
     {
         if (IsTracked)
         {
-            if (Context is null) throw new Exception();//TODO
+            if(_database is null) throw new Exception();//TODO
             
-            if(!GetFieldValue(name).Equals(value)) Context.AddToDirty(this);
+            if(!GetFieldValue(name).Equals(value)) _database.NoticeDirty(null! /*TODO figure out of to give model */,
+                this, name);
         }
         
-        InternalSetFieldValue(name, value);
+        base.SetFieldValue(name, value);
     }
 
     public void Untrack()
     {
         IsTracked = false;
     }
+}
 
+public abstract class Record : IRecord
+{
+    protected Database? _database;
+    
+    public virtual void SetFieldValue(string name, object value)
+    {
+        
+    }
+    
+    public virtual void AttachToDatabase(Database database)
+    {
+        _database = database;
+    }
+    
     protected abstract void InternalSetFieldValue(string name, object value);
-
+    
     public abstract object GetFieldValue(string name);
 }
 
-public interface IRecord
+public interface IRecord : IDatabaseAttachable
 {
     public void SetFieldValue(string name, object value);
 

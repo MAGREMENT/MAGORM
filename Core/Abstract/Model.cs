@@ -5,11 +5,13 @@ namespace Core.Abstract;
 public abstract class Model : INamed, IDatabaseAttachable
 {
     private IReadOnlyList<IFieldDefinition>? _selectFieldDefinitions;
+    private Database? _database;
     
     public abstract string Name { get; }
     
     public virtual void AttachToDatabase(Database database)
     {
+        _database = database;
         foreach (var field in AllFieldDefinitions)
         {
             field.AttachToDatabase(database);
@@ -51,11 +53,18 @@ public abstract class Model : INamed, IDatabaseAttachable
 
     public abstract IFieldDefinition? GetFieldDefinition(string name);
     
-    protected abstract IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
-    
-    public T[] GenerateRecordsFromSelect<T>(IQueryResult query) where T : IRecord
+    public abstract IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
+
+    public T[] Create<T>(params Dictionary<string, object>[] values) where T : IRecord, new()
     {
-        var result = CreateRecordArray<T>(query.Length);
+        if (_database is null) throw new Exception();
+
+        return _database.CreateRecords<T>(this, values);
+    }
+    
+    public T[] Select<T>(IQueryResult query) where T : IRecord, new() //TODO not IQueryResult
+    {
+        var result = new T[query.Length];
         var definitions = GetFieldDefinitionsForSelect();
 
         for (int i = 0; i < query.Length; i++)
@@ -73,6 +82,4 @@ public abstract class Model : INamed, IDatabaseAttachable
         
         return result;
     }
-
-    protected abstract T[] CreateRecordArray<T>(int length) where T : IRecord; //TODO move elsewhere
 }
