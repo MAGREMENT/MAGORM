@@ -2,6 +2,7 @@
 using Core.Abstract;
 using Core.Databases;
 using Core.Databases.SQLite;
+using Core.RecordTypes;
 using MICROSOFT.SQLite;
 
 namespace Tests;
@@ -21,6 +22,10 @@ public class DatabaseTests
     [TearDown]
     public void TeardownDatabases()
     {
+        foreach (var d in _databases)
+        {
+            d.Nuke();
+        }
         _databases.Clear();
     }
 
@@ -43,6 +48,14 @@ public class DatabaseTests
         {
             db.AddModels(m1);
             db.Sync();
+
+            var r1 = db.GetModel("Books")!.Create<DictionaryRecord>(new Dictionary<string, object>
+            {
+                {"Title", "Title Test"},
+                {"PageCount", 8},
+                {"IsProduced", true},
+                {"SerialNumber", "123456"}
+            });
         }
     }
 }

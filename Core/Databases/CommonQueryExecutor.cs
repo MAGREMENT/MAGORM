@@ -97,6 +97,7 @@ public abstract class CommonDatabaseEngine<T>
     public abstract ITransaction CreateTransaction();
 
     public abstract IReadOnlyList<ModelSpecification> GetModelSchemas();
+    public abstract void DropAllTables();
 }
 
 public abstract class CommonTransaction<TConnection>(TConnection connection) 

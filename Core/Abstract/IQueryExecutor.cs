@@ -24,5 +24,7 @@ public interface IDatabaseEngine : IQueryExecutor
     public ITransaction CreateTransaction();
 
     public IReadOnlyList<ModelSpecification> GetModelSchemas();
+
+    public void DropAllTables();
 }
 

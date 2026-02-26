@@ -30,17 +30,9 @@ public class SQLiteDatabaseEngine(string connectionString) : CommonDatabaseEngin
     {
         var result = new List<ModelSpecification>();
         var fields = new List<FieldSpecification>();
-        
-        using var con = CreateConnection();
-        con.Open();
-        using var cmd = CreateCommand("SELECT name\n" + 
-                                "FROM sqlite_schema\n" +
-                                "WHERE type = \"table\" AND name NOT LIKE \"sqlite_%\";", con);
 
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        foreach (var name in EnumerateTables())
         {
-            var name = reader.GetString(0);
             PrimaryKeySpecification? pk = null;
 
             using var pragmaCon = CreateConnection();
@@ -76,6 +68,35 @@ public class SQLiteDatabaseEngine(string connectionString) : CommonDatabaseEngin
         }
         
         return result;
+    }
+
+    public override void DropAllTables()
+    {
+        var names = EnumerateTables().ToArray();
+
+        foreach (var name in names)
+        {
+            //TODO need to take into account foreign keys ?
+            using var con = CreateConnection();
+            con.Open();
+            using var cmd = CreateCommand($"DROP TABLE {name};", con);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    private IEnumerable<string> EnumerateTables()
+    {
+        using var con = CreateConnection();
+        con.Open();
+        using var cmd = CreateCommand("SELECT name\n" + 
+                                      "FROM sqlite_schema\n" +
+                                      "WHERE type = \"table\" AND name NOT LIKE \"sqlite_%\";", con);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            yield return reader.GetString(0);
+        }
     }
 }
 

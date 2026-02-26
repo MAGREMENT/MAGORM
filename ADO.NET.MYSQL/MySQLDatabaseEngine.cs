@@ -27,6 +27,11 @@ public class MySqlDatabaseEngine(string connectionString) : CommonDatabaseEngine
         //TODO with var schema = connection.GetSchema("Tables");
         throw new NotImplementedException();
     }
+
+    public override void DropAllTables()
+    {
+        //TODO
+    }
 }
 
 public class MySqlTransactionWrapper : CommonTransaction<MySqlConnection>

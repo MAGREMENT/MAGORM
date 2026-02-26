@@ -19,10 +19,7 @@ public record ModelReference(string Model, string Field);
 
 public record FieldDefinitionsOptions(bool Required = false, 
     bool Unique = false, 
-    bool AutoIncrement = false, 
-    OnChange<IRecord>? OnChange = null);
-
-public delegate void OnChange<in T>(object oldValue, object newValue, T record, Database db) where T : IRecord;
+    bool AutoIncrement = false);
 
 public enum DBFieldType
 {

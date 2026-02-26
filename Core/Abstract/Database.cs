@@ -25,9 +25,10 @@ public class Database
         }
     }
 
-    public void NoticeDirty(Model model, IRecord record, string field)
+    public void NoticeDirty(IRecord record, string field)
     {
-        _dirty.AddToDirty(model, record, field);
+        /*TODO figure out how to give model */
+        _dirty.AddToDirty(null!, record, field);
     }
 
     public void Sync()
@@ -60,7 +61,7 @@ public class Database
 
     public void Nuke()
     {
-        //TODO
+        _engine.DropAllTables();
     }
 
     public TRecord[] CreateRecords<TRecord>(Model model, params Dictionary<string, object>[] values)
@@ -77,6 +78,7 @@ public class Database
             var val = values[i];
 
             var record = new TRecord();
+            record.AttachToDatabase(this);
             result[i] = record;
             
             foreach (var field in model.AllFieldDefinitions)
@@ -91,7 +93,7 @@ public class Database
                     record.SetFieldValue(field.Name, r);
                     stacker.AddParameter(r);
                 }
-                else if (field.Options.Required) throw new Exception(); //TODO maybe not exception
+                else if (field.Options is { Required: true, AutoIncrement: false }) throw new Exception(); //TODO maybe not exception
             }
             
             stacker.AddQuery(_queryBuilder.Insert(new InsertSpecification(model.Name, fieldNames.ToArray())));

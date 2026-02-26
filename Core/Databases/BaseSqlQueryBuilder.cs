@@ -71,7 +71,7 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         for (int i = 0; i < specification.Fields.Length; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append('@' + i);
+            builder.Append("@" + i);
         }
 
         builder.Append(");");
