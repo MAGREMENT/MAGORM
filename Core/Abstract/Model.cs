@@ -1,10 +1,12 @@
-﻿using Core.Util;
+﻿using Core.Queries;
+using Core.Util;
 
 namespace Core.Abstract;
 
 public abstract class Model : INamed, IDatabaseAttachable
 {
-    private IReadOnlyList<IFieldDefinition>? _selectFieldDefinitions;
+    private IReadOnlyList<IFieldDefinition>? _dependencyOrderedFieldDefinitions;
+    private IReadOnlyList<string>? _allFieldsName;
     private Database? _database;
     
     public abstract string Name { get; }
@@ -18,10 +20,26 @@ public abstract class Model : INamed, IDatabaseAttachable
         }
     }
     
-    public IReadOnlyList<IFieldDefinition> GetFieldDefinitionsForSelect()
+    public IReadOnlyList<IFieldDefinition> GetDependencyOrderedFieldDefinitions()
     {
-        _selectFieldDefinitions ??= DependencyResolutionAlgorithms.Best(AllFieldDefinitions);
-        return _selectFieldDefinitions;
+        _dependencyOrderedFieldDefinitions ??= DependencyResolutionAlgorithms.Best(AllFieldDefinitions);
+        return _dependencyOrderedFieldDefinitions;
+    }
+
+    public IReadOnlyList<string> GetAllFieldsName()
+    {
+        if (_allFieldsName is null)
+        {
+            var result = new string[AllFieldDefinitions.Count];
+            var i = 0;
+            foreach (var field in AllFieldDefinitions)
+            {
+                result[i++] = field.Name;
+            }
+
+            _allFieldsName = result;
+        }
+        return _allFieldsName;
     }
     
     public ModelSpecification GenerateSpecification()
@@ -54,6 +72,11 @@ public abstract class Model : INamed, IDatabaseAttachable
     public abstract IFieldDefinition? GetFieldDefinition(string name);
     
     public abstract IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
+    
+    public T Create<T>(Dictionary<string, object> values) where T : IRecord, new()
+    {
+        return Create<T>([values])[0];
+    }
 
     public T[] Create<T>(params Dictionary<string, object>[] values) where T : IRecord, new()
     {
@@ -62,24 +85,10 @@ public abstract class Model : INamed, IDatabaseAttachable
         return _database.CreateRecords<T>(this, values);
     }
     
-    public T[] Select<T>(IQueryResult query) where T : IRecord, new() //TODO not IQueryResult
+    public List<T> Select<T>(QueryCondition? condition = null, params string[] fields) where T : IRecord, new()
     {
-        var result = new T[query.Length];
-        var definitions = GetFieldDefinitionsForSelect();
+        if (_database is null) throw new Exception();
 
-        for (int i = 0; i < query.Length; i++)
-        {
-            query.Next();
-
-            foreach (var definition in definitions)
-            {
-                var stringValue = query.TryGetValue(definition.Name, out var v) ? v : null;
-                if (!definition.TryComputeValue(stringValue, result[i], out var value)) throw new Exception(); //TODO
-                
-                result[i].SetFieldValue(definition.Name, value);
-            }
-        }
-        
-        return result;
+        return _database.SelectRecords<T>(this, fields.Length == 0 ? GetAllFieldsName() : fields, condition);
     }
 }

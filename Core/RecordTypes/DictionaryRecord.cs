@@ -2,27 +2,32 @@
 
 namespace Core.RecordTypes;
 
-public class DictionaryRecord : Record
+public class DictionaryTrackedRecord : TrackedRecord
 {
-    private readonly Dictionary<string, object> _dic = new();
+    private readonly Dictionary<string, object?> _dic = new();
     
-    protected override void InternalSetFieldValue(string name, object value)
+    protected override void InternalSetValue(string name, object? value)
     {
         _dic[name] = value;
     }
 
-    protected override bool HasValue(string name)
-    {
-        return _dic.ContainsKey(name);
-    }
+    public override int GetFieldCount() => _dic.Count;
 
-    public override object GetFieldValue(string name)
+    public override IEnumerable<string> GetFieldNames() => _dic.Keys;
+
+    public override bool TryGetValue(string key, out object? value)
     {
-        return _dic[name];
+        return _dic.TryGetValue(key, out value);
     }
 
     public T _<T>(string name)
     {
-        return (T)_dic[name];
+        var v = _dic[name];
+        return v is null ? default! : (T)v;
+    }
+
+    public object? _(string name)
+    {
+        return _dic[name];
     }
 }

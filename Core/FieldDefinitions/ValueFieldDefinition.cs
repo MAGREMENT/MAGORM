@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Core.Abstract;
+﻿using Core.Abstract;
 
 namespace Core.FieldDefinitions;
 
@@ -17,11 +16,18 @@ public abstract class ValueFieldDefinition(string name, FieldDefinitionsOptions 
     
     public ModelReference[] References => [];
 
-    public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
+    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord
     {
-        result = value!;
-        return true;
+        if (value is null)
+        {
+            result = null;
+            return !Options.Required;
+        }
+
+        return TryConvert(value, out result); //TODO make a fonction that call queryResult.GetInt() instead maybe ?
     }
+
+    public abstract bool TryConvert(object value, out object? result);
     
     public void AttachToDatabase(Database database) { }
 }

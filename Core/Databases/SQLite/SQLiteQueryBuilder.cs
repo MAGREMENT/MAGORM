@@ -1,4 +1,6 @@
 ﻿using Core.Abstract;
+using Core.Queries.Common;
+using Core.Queries.Specifications;
 
 namespace Core.Databases.SQLite;
 

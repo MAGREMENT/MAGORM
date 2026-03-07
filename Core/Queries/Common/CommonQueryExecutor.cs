@@ -1,7 +1,7 @@
 ﻿using System.Data.Common;
-using Core.Abstract;
+using Core.Queries.Results;
 
-namespace Core.Databases;
+namespace Core.Queries.Common;
 
 public abstract class CommonQueryExecutor<T> : IQueryExecutor
     where T : DbConnection
@@ -11,13 +11,11 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
     protected abstract T CreateConnection();
 
     protected abstract DbCommand CreateCommand(string query, T connection);
-    
 
-    public IQueryResult ExecuteResult(Query query, object[] parameters)
+    public void ExecuteBufferedResult(IBufferedQueryResult result, Query query, IReadOnlyList<object> parameters)
     {
         query.CheckParameters(parameters);
-
-        var result = new ListQueryResult();
+        
         var con = CreateConnection();
         con.Open();
         
@@ -37,10 +35,29 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         }
         
         if(ShouldDisposeOfConnection) con.Dispose();
+
+        if (!result.Reset()) throw new Exception("Could not reset result");
+    }
+
+    public TResult ExecuteResult<TResult>(OnQueryResult<TResult> onResult, Query query, IReadOnlyList<object> parameters)
+    {
+        query.CheckParameters(parameters);
+        
+        var con = CreateConnection();
+        con.Open();
+
+        TResult result;
+        using (var cmd = SetupCommand(query, parameters, con))
+        {
+            result = onResult(new DbDataReaderQueryResult(cmd.ExecuteReader()));
+        }
+        
+        if(ShouldDisposeOfConnection) con.Dispose();
+
         return result;
     }
 
-    public object? ExecuteSingle(Query query, object[] parameters)
+    public object? ExecuteSingle(Query query, IReadOnlyList<object> parameters)
     {
         query.CheckParameters(parameters);
 
@@ -57,7 +74,7 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         return result;
     }
 
-    public void Execute(Query query, object[] parameters)
+    public void Execute(Query query, IReadOnlyList<object> parameters)
     {
         query.CheckParameters(parameters);
 
@@ -72,11 +89,11 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         if(ShouldDisposeOfConnection) con.Dispose();
     }
 
-    private DbCommand SetupCommand(Query query, object[] parameters, T con)
+    private DbCommand SetupCommand(Query query, IReadOnlyList<object> parameters, T con)
     {
         var cmd = CreateCommand(query.String, con);
 
-        for (int i = 0; i < parameters.Length; i++)
+        for (int i = 0; i < parameters.Count; i++)
         {
             var p = cmd.CreateParameter();
             p.ParameterName = "@" + i;

@@ -1,4 +1,5 @@
 ﻿using Core.Abstract;
+using Core.Queries.Common;
 
 namespace Core.Databases.MySQL;
 

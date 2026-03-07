@@ -20,7 +20,7 @@ public class ComputedFieldDefinition<TType>(string name, TryCompute<TType, IReco
     
     public ModelReference[] References => [];
 
-    public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord
+    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord
     {
         if (!tryCompute(record, out var r))
         {

@@ -17,6 +17,11 @@ public class DatabaseTests
         _databases.Add(new Database(new SQLiteQueryBuilder(), 
             new SQLiteDatabaseEngine("Data Source=test.db"), 
             new DictionaryModelBank()));
+        
+        foreach (var d in _databases)
+        {
+            d.Nuke();
+        }
     }
 
     [TearDown]
@@ -49,13 +54,17 @@ public class DatabaseTests
             db.AddModels(m1);
             db.Sync();
 
-            var r1 = db.GetModel("Books")!.Create<DictionaryRecord>(new Dictionary<string, object>
+            var r1 = db.GetModel("Books")!.Create<DictionaryTrackedRecord>(new Dictionary<string, object>
             {
                 {"Title", "Title Test"},
                 {"PageCount", 8},
                 {"IsProduced", true},
                 {"SerialNumber", "123456"}
             });
+
+            var r1Selected = db.GetModel("Books")!.Select<DictionaryTrackedRecord>();
+            Assert.That(r1Selected, Has.Count.EqualTo(1));
+            Assert.That(r1.AreCommonFieldsEqual(r1Selected[0]));
         }
     }
 }

@@ -1,7 +1,8 @@
 ﻿using System.Text;
 using Core.Abstract;
+using Core.Queries.Specifications;
 
-namespace Core.Databases;
+namespace Core.Queries.Common;
 
 public abstract class BaseSqlQueryBuilder : IQueryBuilder
 {
@@ -23,7 +24,7 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
             var ignoreAutoIncrement = false;
             if (specification.PrimaryKey.Names.Contains(f.Name))
             {
-                if (specification.PrimaryKey.Names.Length == 1)
+                if (specification.PrimaryKey.Names.Count == 1)
                 {
                     builder.Append(" PRIMARY KEY");
                     pkDone = true;
@@ -61,56 +62,63 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         var builder = new StringBuilder();
 
         builder.Append($"INSERT INTO {specification.Model} (");
-        for (int i = 0; i < specification.Fields.Length; i++)
+        for (int i = 0; i < specification.Fields.Count; i++)
         {
             if (i > 0) builder.Append(", ");
             builder.Append(specification.Fields[i]);
         }
 
         builder.Append(")\nVALUES (");
-        for (int i = 0; i < specification.Fields.Length; i++)
+        for (int i = 0; i < specification.Fields.Count; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append("@" + i);
+            builder.Append(GetParameter(i));
         }
 
         builder.Append(");");
 
-        return new Query(builder.ToString(), specification.Fields.Length);
+        return new Query(builder.ToString(), specification.Fields.Count);
     }
 
     public Query Update(UpdateSpecification specification)
     {
         var builder = new StringBuilder();
+        var additionalParameterCount = 0;
 
         builder.Append($"UPDATE {specification.Model}\nSET");
 
-        for (int i = 0; i < specification.Fields.Length; i++)
+        for (int i = 0; i < specification.Fields.Count; i++)
         {
             builder.Append(' ');
             if (i > 0) builder.Append(", ");
             builder.Append(specification.Fields[i]);
             builder.Append(" = ");
-            builder.Append('@' + i);
+            builder.Append(GetParameter(i));
         }
 
-        var whereQuery = Where(specification.Where, specification.Fields.Length);
-        builder.Append(whereQuery);
+        if (specification.Where is not null)
+        {
+            var whereQuery = Where(specification.Where, specification.Fields.Count);
+            builder.Append(whereQuery);
+            additionalParameterCount += whereQuery.ParameterCount;
+        }
+        
         builder.Append(';');
         
-        return new Query(builder.ToString(), specification.Fields.Length + whereQuery.ParameterCount);
+        return new Query(builder.ToString(), specification.Fields.Count + additionalParameterCount);
     }
 
     public Query Select(SelectSpecification specification)
     {
         var builder = new StringBuilder();
+        var parameterCount = 0;
 
         builder.Append("SELECT ");
 
-        if (specification.Fields.Length == 0) builder.Append('*');
+        if (specification.Fields.Count == 0) builder.Append('*');
         else
         {
-            for (int i = 0; i < specification.Fields.Length; i++)
+            for (int i = 0; i < specification.Fields.Count; i++)
             {
                 if (i > 0) builder.Append(", ");
                 builder.Append(specification.Fields[i]);
@@ -118,9 +126,13 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         }
 
         builder.Append($"\nFROM {specification.Model}");
-        
-        var whereQuery = Where(specification.Where, specification.Fields.Length);
-        builder.Append(whereQuery);
+
+        if (specification.Where is not null)
+        {
+            var whereQuery = Where(specification.Where, specification.Fields.Count);
+            builder.Append(whereQuery);
+            parameterCount += whereQuery.ParameterCount;
+        }
 
         if (specification.OrderBy.Length > 0)
         {
@@ -137,7 +149,7 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
         
         builder.Append(';');
         
-        return new Query(builder.ToString(), specification.Fields.Length + whereQuery.ParameterCount);
+        return new Query(builder.ToString(), parameterCount);
     }
 
     public virtual bool IsSameDBFieldType(DBFieldType left, DBFieldType right)
@@ -147,7 +159,58 @@ public abstract class BaseSqlQueryBuilder : IQueryBuilder
 
     private Query Where(WhereSpecification specification, int currParameterCount)
     {
-        return new Query(string.Empty, 0); //TODO
+        var builder = new StringBuilder();
+        Where(specification, ref currParameterCount, builder);
+        return new Query(builder.ToString(), currParameterCount);
+    }
+
+    private void Where(WhereSpecification specification, ref int currParameterCount, StringBuilder builder)
+    {
+        builder.Append('(');
+        WhereArgument(specification.Left, ref currParameterCount, builder);
+        builder.Append(") ");
+        builder.Append(GetOperator(specification.Operator));
+        builder.Append(" (");
+        WhereArgument(specification.Right, ref currParameterCount, builder);
+        builder.Append(')');
+    }
+
+    private void WhereArgument(WhereArgument argument, ref int currParameterCount, StringBuilder builder)
+    {
+        switch (argument.Type)
+        {
+            case WhereArgumentType.FIELD :
+                builder.Append(argument.Text);
+                break;
+            case WhereArgumentType.ARGUMENT :
+                Where(argument.Argument, ref currParameterCount, builder);
+                break;
+            case WhereArgumentType.PARAMETER :
+                builder.Append(GetParameter(currParameterCount));
+                currParameterCount++;
+                break;
+        }
+    }
+
+    protected virtual string GetParameter(int paramCount)
+    {
+        return "@" + paramCount;
+    }
+
+    protected string GetOperator(DBOperator @operator)
+    {
+        return @operator switch
+        {
+            DBOperator.NONE => string.Empty,
+            DBOperator.PLUS => "+",
+            DBOperator.MINUS => "-",
+            DBOperator.OR => "OR",
+            DBOperator.AND => "AND",
+            DBOperator.LIKE => "LIKE",
+            DBOperator.EQUAL => "=",
+            DBOperator.IS => "IS",
+            _ => throw new ArgumentOutOfRangeException()
+        };
     }
 
     protected abstract string TranslateDBFieldType(DBFieldType type);

@@ -6,4 +6,17 @@ public class StringValueFieldDefinition(string name, FieldDefinitionsOptions opt
     : ValueFieldDefinition(name, options)
 {
     public override DBFieldType GetDBFieldType() => DBFieldType.STRING;
+    
+    public override bool TryConvert(object value, out object? result)
+    {
+        switch (value)
+        {
+            case string s :
+                result = s;
+                return true;
+            default:
+                result = null;
+                return false;
+        }
+    }
 }

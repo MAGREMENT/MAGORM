@@ -1,8 +1,8 @@
 ﻿using Core.Abstract;
 
-namespace Core.Databases;
+namespace Core.Queries.Results;
 
-public class ListQueryResult : IQueryResult
+public class ListQueryResult : IBufferedQueryResult
 {
     private readonly List<DictionaryList<string, object?>> _values = new();
     private int _curr = -1;
@@ -35,9 +35,15 @@ public class ListQueryResult : IQueryResult
         return _curr < _values.Count;
     }
 
-    public void Reset()
+    public bool Reset()
     {
         _curr = -1;
+        return true;
+    }
+
+    public void Dispose()
+    {
+        
     }
 }
 

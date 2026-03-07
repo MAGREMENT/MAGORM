@@ -1,4 +1,7 @@
-﻿namespace Core.Abstract;
+﻿using Core.Queries;
+using Core.Queries.Specifications;
+
+namespace Core.Abstract;
 
 public class Database
 {
@@ -64,7 +67,7 @@ public class Database
         _engine.DropAllTables();
     }
 
-    public TRecord[] CreateRecords<TRecord>(Model model, params Dictionary<string, object>[] values)
+    internal TRecord[] CreateRecords<TRecord>(Model model, params Dictionary<string, object>[] values)
         where TRecord : IRecord, new()
     {
         if (GetModel(model.Name) is null) throw new Exception();//TODO
@@ -72,6 +75,7 @@ public class Database
         var result = new TRecord[values.Length];
         var stacker = new QueryStacker();
         var fieldNames = new List<string>();
+        var fields = model.GetDependencyOrderedFieldDefinitions();
         
         for(int i = 0; i < values.Length; i++)
         {
@@ -81,16 +85,23 @@ public class Database
             record.AttachToDatabase(this);
             result[i] = record;
             
-            foreach (var field in model.AllFieldDefinitions)
+            foreach (var field in fields)
             {
-                if(!field.IsStored()) continue;
+                object? v;
+                if (!field.IsStored())
+                {
+                    field.TryComputeValue(null, record, out v);
+                    record.SetValue(field.Name, v, true);
+                    
+                    continue;
+                }
                 
-                if (val.TryGetValue(field.Name, out var v))
+                if (val.TryGetValue(field.Name, out v))
                 {
                     if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
                     
                     fieldNames.Add(field.Name);
-                    record.SetFieldValue(field.Name, r);
+                    record.SetValue(field.Name, r, true);
                     stacker.AddParameter(r);
                 }
                 else if (field.Options is { Required: true, AutoIncrement: false }) throw new Exception(); //TODO maybe not exception
@@ -103,6 +114,48 @@ public class Database
         transaction.Execute(stacker.GetQuery(), stacker.GetParameters());
         transaction.Commit();
         
+        return result;
+    }
+
+    internal List<T> SelectRecords<T>(Model model, IReadOnlyList<string> fieldNames, QueryCondition? where)
+        where T : IRecord, new()
+    {
+        if (GetModel(model.Name) is null) throw new Exception();//TODO
+
+        WhereSpecification? whereSpecification;
+        IReadOnlyList<object> parameters;
+        if (where is null)
+        {
+            whereSpecification = null;
+            parameters = [];
+        } else (whereSpecification, parameters) = where.Compile();
+        
+        var query = _queryBuilder.Select(new SelectSpecification(model.Name, fieldNames, whereSpecification, [])); //TODO order by
+
+        var fields = model.GetDependencyOrderedFieldDefinitions();
+        return _engine.ExecuteResult<List<T>>(queryResult => CreateRecordsFromQueryResult<T>(queryResult, fields), 
+            query, parameters);
+    }
+
+    private List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult, IReadOnlyList<IFieldDefinition> fields)
+        where T : IRecord, new()
+    {
+        var result = new List<T>();
+        while (queryResult.Next())
+        {
+            var record = new T();
+            record.AttachToDatabase(this);
+            result.Add(record);
+
+            foreach (var definition in fields)
+            {
+                var stringValue = queryResult.TryGetValue(definition.Name, out var v) ? v : null;
+                if (!definition.TryComputeValue(stringValue, record, out var value)) throw new Exception(); //TODO
+                
+                record.SetValue(definition.Name, value, true);
+            }
+        }
+
         return result;
     }
 
@@ -127,7 +180,9 @@ public class DirtyCollection : Dictionary<string, Dictionary<object, RecordChang
             this[model.Name] = dic;
         }
 
-        var pk = record.GetFieldValue(model.GetPrimaryKey().Name);
+        if (!record.TryGetValue(model.GetPrimaryKey().Name, out var pk) || pk is null)
+            throw new Exception("No primary key");
+        
         if(!dic.TryGetValue(pk, out var change))
         {
             change = new RecordChange(record, new HashSet<string>());

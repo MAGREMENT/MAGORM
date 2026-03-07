@@ -12,7 +12,7 @@ public interface IFieldDefinition : IDependencies, IDatabaseAttachable
     
     public ModelReference[] References { get; }
     
-    public bool TryComputeValue<T>(object? value, T record, [NotNullWhen(true)] out object? result) where T : IRecord; 
+    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord; 
 }
 
 public record ModelReference(string Model, string Field);
