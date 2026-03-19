@@ -29,5 +29,11 @@ public abstract class ValueFieldDefinition(string name, FieldDefinitionsOptions 
 
     public abstract bool TryConvert(object value, out object? result);
     
-    public void AttachToDatabase(Database database) { }
+    public void Attach(Model obj)
+    {
+    }
+
+    public void Detach(Model obj)
+    {
+    }
 }

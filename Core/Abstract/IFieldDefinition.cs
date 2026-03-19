@@ -1,8 +1,6 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿namespace Core.Abstract;
 
-namespace Core.Abstract;
-
-public interface IFieldDefinition : IDependencies, IDatabaseAttachable
+public interface IFieldDefinition : IDependencies, IAttachable<Model>
 {
     public FieldDefinitionsOptions Options { get; }
 
@@ -12,6 +10,7 @@ public interface IFieldDefinition : IDependencies, IDatabaseAttachable
     
     public ModelReference[] References { get; }
     
+    //TODO divide into CheckValueValidity and ComputeValue
     public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord; 
 }
 
@@ -23,7 +22,7 @@ public record FieldDefinitionsOptions(bool Required = false,
 
 public enum DBFieldType
 {
-    INT, STRING, BOOL
+    NOT_DB_FIELD, INT, STRING, BOOL
 }
 
 public static class DBFieldTypeExtensions
@@ -40,6 +39,6 @@ public static class DBFieldTypeExtensions
         if (type == typeof(string)) return DBFieldType.STRING;
         if (type == typeof(bool)) return DBFieldType.BOOL;
 
-        throw new ArgumentOutOfRangeException();
+        return DBFieldType.NOT_DB_FIELD;
     }
 }

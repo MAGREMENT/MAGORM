@@ -22,6 +22,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ADO.NET.MYSQL\ADO.NET.MYSQL.csproj" />
+      <ProjectReference Include="..\BaseGenerator\BaseGenerator.csproj" />
+      <ProjectReference Include="..\Base\Base.csproj" />
       <ProjectReference Include="..\Core\Core.csproj" />
       <ProjectReference Include="..\MICROSOFT.SQLite\MICROSOFT.SQLite.csproj" />
     </ItemGroup>

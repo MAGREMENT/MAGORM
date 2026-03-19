@@ -3,27 +3,35 @@ using Core.Util;
 
 namespace Core.Abstract;
 
-public abstract class Model : INamed, IDatabaseAttachable
+public abstract class Model : INamed, IAttachable<Database>
 {
     private IReadOnlyList<IFieldDefinition>? _dependencyOrderedFieldDefinitions;
     private IReadOnlyList<string>? _allFieldsName;
     private Database? _database;
     
     public abstract string Name { get; }
+
+    internal Database? Database => _database;
     
-    public virtual void AttachToDatabase(Database database)
+    public virtual void Attach(Database database)
     {
         _database = database;
-        foreach (var field in AllFieldDefinitions)
-        {
-            field.AttachToDatabase(database);
-        }
     }
-    
+
+    public void Detach(Database obj)
+    {
+        _database = null;
+    }
+
     public IReadOnlyList<IFieldDefinition> GetDependencyOrderedFieldDefinitions()
     {
         _dependencyOrderedFieldDefinitions ??= DependencyResolutionAlgorithms.Best(AllFieldDefinitions);
         return _dependencyOrderedFieldDefinitions;
+    }
+
+    public void NoticeDirty(IRecord record, string field)
+    {
+        _database?.NoticeDirty(this, record, field);
     }
 
     public IReadOnlyList<string> GetAllFieldsName()

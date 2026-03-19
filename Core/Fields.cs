@@ -19,7 +19,7 @@ public static class Fields
         FieldDefinitionsOptions? options = null, params string[] dependsOn) 
         => new ComputedFieldDefinition<TType>(name, tryCompute, dependsOn, options ?? new FieldDefinitionsOptions());
 
-    public static IFieldDefinition Reference<TModel>(string name, FieldDefinitionsOptions? options = null,
-        string? otherFieldName = null) where TModel : Model
-        => new ReferenceFieldDefinition<TModel>(name, options ?? new FieldDefinitionsOptions(), otherFieldName);
+    public static IFieldDefinition Reference(string name, string otherModelName, string? otherFieldName = null, 
+        FieldDefinitionsOptions? options = null)
+        => new ReferenceFieldDefinition(name, otherModelName, options ?? new FieldDefinitionsOptions(), otherFieldName);
 }

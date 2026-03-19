@@ -2,11 +2,16 @@
 
 public abstract class TrackedRecord : IRecord
 {
-    private Database? _database;
-
-    public virtual void AttachToDatabase(Database database)
+    private Model? _model;
+    
+    public void Attach(Model obj)
     {
-        _database = database;
+        _model = obj;
+    }
+
+    public void Detach(Model obj)
+    {
+        _model = null;
     }
 
     public void SetValue(string name, object? value, bool ignoreOnSet = false)
@@ -22,13 +27,13 @@ public abstract class TrackedRecord : IRecord
 
     protected void BeforeOnSet(string name, object? valueBefore, object? value)
     {
-        if(_database is null) throw new Exception();//TODO
+        if(_model is null) throw new Exception();//TODO
 
         bool shouldNotice;
         if (valueBefore is null) shouldNotice = value is not null;
         else shouldNotice = !valueBefore.Equals(value);
                 
-        if(shouldNotice) _database.NoticeDirty(this, name);
+        if(shouldNotice) _model.NoticeDirty(this, name);
     }
 
     protected abstract void InternalSetValue(string name, object? value);
@@ -40,7 +45,7 @@ public abstract class TrackedRecord : IRecord
     public abstract bool TryGetValue(string key, out object? value);
 }
 
-public interface IRecord : IDatabaseAttachable, IKeyValue<string, object?>
+public interface IRecord : IKeyValue<string, object?>, IAttachable<Model>
 {
     public int GetFieldCount();
 

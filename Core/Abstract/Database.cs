@@ -24,14 +24,13 @@ public class Database
         _modelBank.AddModels(models);
         foreach (var model in models)
         {
-            model.AttachToDatabase(this);
+            model.Attach(this);
         }
     }
 
-    public void NoticeDirty(IRecord record, string field)
+    public void NoticeDirty(Model model, IRecord record, string field)
     {
-        /*TODO figure out how to give model */
-        _dirty.AddToDirty(null!, record, field);
+        _dirty.AddToDirty(model, record, field);
     }
 
     public void Sync()
@@ -82,7 +81,7 @@ public class Database
             var val = values[i];
 
             var record = new TRecord();
-            record.AttachToDatabase(this);
+            record.Attach(model);
             result[i] = record;
             
             foreach (var field in fields)
@@ -132,19 +131,20 @@ public class Database
         
         var query = _queryBuilder.Select(new SelectSpecification(model.Name, fieldNames, whereSpecification, [])); //TODO order by
 
-        var fields = model.GetDependencyOrderedFieldDefinitions();
-        return _engine.ExecuteResult<List<T>>(queryResult => CreateRecordsFromQueryResult<T>(queryResult, fields), 
+        
+        return _engine.ExecuteResult<List<T>>(queryResult => CreateRecordsFromQueryResult<T>(queryResult, model), 
             query, parameters);
     }
 
-    private List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult, IReadOnlyList<IFieldDefinition> fields)
+    private List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult, Model model)
         where T : IRecord, new()
     {
+        var fields = model.GetDependencyOrderedFieldDefinitions();
         var result = new List<T>();
         while (queryResult.Next())
         {
             var record = new T();
-            record.AttachToDatabase(this);
+            record.Attach(model);
             result.Add(record);
 
             foreach (var definition in fields)
@@ -161,11 +161,6 @@ public class Database
 
     public Model? GetModel<TModel>() => _modelBank.GetModel<TModel>();
     public Model? GetModel(string name) => _modelBank.GetModel(name);
-}
-
-public interface IDatabaseAttachable
-{
-    void AttachToDatabase(Database database);
 }
 
 public record RecordChange(IRecord Record, HashSet<string> Fields);

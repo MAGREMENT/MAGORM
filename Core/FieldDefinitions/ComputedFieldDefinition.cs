@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Core.Abstract;
+﻿using Core.Abstract;
 
 namespace Core.FieldDefinitions;
 
@@ -32,7 +31,9 @@ public class ComputedFieldDefinition<TType>(string name, TryCompute<TType, IReco
         return true;
     }
 
-    public void AttachToDatabase(Database database) { }
+    public void Attach(Model obj) { }
+
+    public void Detach(Model obj) { }
 }
 
 public delegate bool TryCompute<TType, in TRecord>(TRecord record, out TType result) where TRecord : IRecord;

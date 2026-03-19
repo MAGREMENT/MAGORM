@@ -1,39 +1,37 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Core.Abstract;
+﻿using Core.Abstract;
 
 namespace Core.FieldDefinitions;
 
-public class ReferenceFieldDefinition<TModel>(string name, FieldDefinitionsOptions options, string? otherModelField = null) 
+public class ReferenceFieldDefinition(string name, string _otherModelName, FieldDefinitionsOptions options, string? otherModelField = null) 
     : IFieldDefinition
-    where TModel : Model
 {
-    private IFieldDefinition? _referenceField;
-    
+    public IFieldDefinition? ReferenceField { get; private set; }
+
     public string Name { get; } = name;
     public IReadOnlyList<string> DependsOn => [];
     public FieldDefinitionsOptions Options { get; } = options with { AutoIncrement = false};
 
     public DBFieldType GetDBFieldType()
     {
-        if (_referenceField is null) throw new ArgumentException(); //TODO
+        if (ReferenceField is null) throw new ArgumentException(); //TODO
         
-        return _referenceField.GetDBFieldType();
+        return ReferenceField.GetDBFieldType();
     }
 
     public bool IsStored() => true;
 
-    public ModelReference[] References => [];
+    public ModelReference[] References { get; private set; } = [];
 
     public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord
     {
-        if (_referenceField is null) throw new ArgumentException(); //TODO
+        if (ReferenceField is null) throw new ArgumentException(); //TODO
         
-        return _referenceField.TryComputeValue(value, record, out result);
+        return ReferenceField.TryComputeValue(value, record, out result);
     }
 
-    public void AttachToDatabase(Database database)
+    public void Attach(Model obj)
     {
-        var otherModel = database.GetModel<TModel>();
+        var otherModel = obj.Database?.GetModel(_otherModelName);
         if (otherModel is null) throw new ArgumentException(); //TODO
 
         var field = otherModelField is null
@@ -42,6 +40,13 @@ public class ReferenceFieldDefinition<TModel>(string name, FieldDefinitionsOptio
 
         if (field is null) throw new ArgumentException(); //TODO
 
-        _referenceField = field;
+        ReferenceField = field;
+        References = [new ModelReference(otherModel.Name, field.Name)];
+    }
+
+    public void Detach(Model obj)
+    {
+        ReferenceField = null;
+        References = [];
     }
 }
