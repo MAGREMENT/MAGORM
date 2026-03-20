@@ -1,5 +1,4 @@
 ﻿using Base;
-using BaseGenerator;
 
 namespace Tests;
 
@@ -9,20 +8,25 @@ public class PropertyCollectionGeneratorTests
     public void Test()
     {
         var cls = new TestClassPropertyCollection();
-        var a = 1;
+        var module = new CountModule();
+        cls.InsertModule(module);
+        
+        cls.Value = 67;
+        var got = cls.Value;
+        
+        Assert.That(got, Is.EqualTo(67));
+        Assert.That(module.BeforeSetCount, Is.EqualTo(1));
+        Assert.That(module.AfterSetCount, Is.EqualTo(1));
+        Assert.That(module.BeforeGetCount, Is.EqualTo(1));
+        Assert.That(module.AfterGetCount, Is.EqualTo(1));
     }
 }
 
+[TrackedPropertyCollection]
 public partial class TestClassPropertyCollection : ClassPropertyCollection
 {
-    [GeneratedProperty]
+    [TrackedProperty]
     public partial int Value { get; set; }
-}
-
-[GeneratedPropertyCollection]
-public class AAAA
-{
-    
 }
 
 public class CountModule : PropertyCollectionModule

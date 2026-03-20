@@ -6,6 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,7 +24,9 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ADO.NET.MYSQL\ADO.NET.MYSQL.csproj" />
-      <ProjectReference Include="..\BaseGenerator\BaseGenerator.csproj" />
+        <ProjectReference Include="..\BaseGenerator\BaseGenerator.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false"/>
       <ProjectReference Include="..\Base\Base.csproj" />
       <ProjectReference Include="..\Core\Core.csproj" />
       <ProjectReference Include="..\MICROSOFT.SQLite\MICROSOFT.SQLite.csproj" />

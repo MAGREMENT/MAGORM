@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -11,7 +12,6 @@ namespace BaseGenerator;
 [Generator]
 public class PropertyCollectionGenerator : IIncrementalGenerator
 {
-    
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var classDeclarations = context.SyntaxProvider
@@ -20,10 +20,6 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
         
         context.RegisterSourceOutput(classDeclarations, (spc, symbol) =>
         {
-            if (!System.Diagnostics.Debugger.IsAttached)
-            {
-                System.Diagnostics.Debugger.Launch();
-            }
             var source = GenerateSetterAndGetters(symbol!);
             spc.AddSource($"{symbol!.Name}.g.cs", SourceText.From(source, Encoding.UTF8));
         });
@@ -40,19 +36,23 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
     private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context, CancellationToken token)
     {
         var classSyntax = (ClassDeclarationSyntax)context.Node;
+        foreach (var modifier in classSyntax.Modifiers)
+        {
+            if (modifier.IsKind(SyntaxKind.AbstractKeyword)) return null;
+        }
         foreach (var attributeListSyntax in classSyntax.AttributeLists)
         {
             foreach (var attributeSyntax in attributeListSyntax.Attributes)
             {
-                var attributeSymbol = context.SemanticModel.GetSymbolInfo(attributeSyntax).Symbol;
+                var attributeSymbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, attributeSyntax).Symbol;
                 if (attributeSymbol is null)
                 {
                     continue;
                 }
                 
-                if (attributeSymbol.ContainingType.ToDisplayString() == "Base.GeneratedPropertyCollectionAttribute")
+                if (attributeSymbol.ContainingType.ToDisplayString() == "Base.TrackedPropertyCollectionAttribute")
                 {
-                    return context.SemanticModel.GetDeclaredSymbol(classSyntax) as INamedTypeSymbol;
+                    return ModelExtensions.GetDeclaredSymbol(context.SemanticModel, classSyntax) as INamedTypeSymbol;
                 }
             }
         }
@@ -70,7 +70,7 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
             var ok = false;
             foreach (var attr in prop.GetAttributes())
             {
-                if (attr.AttributeClass?.ToDisplayString() == "Base.GeneratedPropertyCollection")
+                if (attr.AttributeClass?.ToDisplayString() == "Base.TrackedPropertyAttribute")
                 {
                     ok = true;
                     break;
@@ -79,7 +79,6 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
 
             if(ok) properties.Add(prop);
         }
-        
         
         var result = new StringBuilder(GetClassStart(symbol));
 
@@ -98,33 +97,35 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
         return $$"""
                  namespace {{symbol.ContainingNamespace.ToDisplayString()}};
 
-                 public partial class {{symbol.ContainingType.Name}}
+                 public partial class {{symbol.Name}}
                  {
                  """;
     }
 
     private static string GetPropertyGetterAndSetter(IPropertySymbol symbol)
     {
-        var name = symbol.ToDisplayString();
+        var name = symbol.Name;
+        var stringifiedName = $"\"{name}\"";
         var privateName = "_" + name.ToLower();
         
         return $$"""
+                 
                      private {{symbol.Type.ToDisplayString()}} {{privateName}};
 
-                     public {{symbol.Type.ToDisplayString()}} {{name}}
+                     public partial {{symbol.Type.ToDisplayString()}} {{name}}
                      {
                          get 
                          {
-                             BeforeGetValue(name);
+                             BeforeGetValue({{stringifiedName}});
                              var val = {{privateName}};
-                             AfterGetValue(name, val);
+                             AfterGetValue({{stringifiedName}}, val);
                              return val;
                          }
                          set
                          {
-                             BeforeSetValue(name, value);
+                             BeforeSetValue({{stringifiedName}}, value);
                              {{privateName}} = value;
-                             AfterSetValue(name, value);
+                             AfterSetValue({{stringifiedName}}, value);
                          }
                      }
                      
@@ -134,13 +135,14 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
     private static string GetClassEnd(IReadOnlyList<IPropertySymbol> properties)
     {
         return $$"""
-               public override int GetPropertyCount() {
-                    return {{properties.Count}};
-               }
                
-               public override IEnumerable<string> GetPropertiesName() {
-                    return [{{string.Join(", ", properties.Select(p => p.ToDisplayString()))}}];
-               }
+                   public override int GetPropertyCount() {
+                        return {{properties.Count}};
+                   }
+                   
+                   public override IEnumerable<string> GetPropertiesName() {
+                        return [{{string.Join(", ", properties.Select(p => $"\"{p.Name}\""))}}];
+                   }
                
                }
                """;

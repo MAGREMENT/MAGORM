@@ -101,7 +101,7 @@ public class Database
                     
                     fieldNames.Add(field.Name);
                     record.SetValue(field.Name, r, true);
-                    stacker.AddParameter(r);
+                    stacker.AddParameter(r!);
                 }
                 else if (field.Options is { Required: true, AutoIncrement: false }) throw new Exception(); //TODO maybe not exception
             }

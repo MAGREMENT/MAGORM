@@ -1,13 +1,15 @@
 ﻿namespace Base;
 
-public abstract class PropertyCollectionModule(IPropertyCollectionModule? _next = null) : IPropertyCollectionModule
+public abstract class PropertyCollectionModule : IPropertyCollectionModule
 {
-    public virtual void BeforeSetValue(string name, object value)
+    internal IPropertyCollectionModule? _next = null;
+    
+    public virtual void BeforeSetValue(string name, object? value)
     {
         _next?.BeforeSetValue(name, value);
     }
 
-    public virtual void AfterSetValue(string name, object value)
+    public virtual void AfterSetValue(string name, object? value)
     {
         _next?.AfterSetValue(name, value);
     }
@@ -17,7 +19,7 @@ public abstract class PropertyCollectionModule(IPropertyCollectionModule? _next 
         _next?.BeforeGetValue(name);
     }
 
-    public virtual void AfterGetValue(string name, object value)
+    public virtual void AfterGetValue(string name, object? value)
     {
         _next?.AfterGetValue(name, value);
     }
