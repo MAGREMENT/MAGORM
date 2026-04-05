@@ -1,4 +1,4 @@
-﻿namespace Base;
+﻿namespace Base.PropertyCollections;
 
 [AttributeUsage(AttributeTargets.Property)]
 public class TrackedPropertyAttribute : Attribute

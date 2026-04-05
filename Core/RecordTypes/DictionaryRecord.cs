@@ -1,33 +1,17 @@
-﻿using Core.Abstract;
+﻿using Base.PropertyCollections.Implementations;
+using Core.Abstract;
 
 namespace Core.RecordTypes;
 
-public class DictionaryTrackedRecord : TrackedRecord
+public class DictionaryRecord : DictionaryPropertyCollection, IRecord
 {
-    private readonly Dictionary<string, object?> _dic = new();
-    
-    protected override void InternalSetValue(string name, object? value)
+    public void InitValue(string name, object? value)
     {
-        _dic[name] = value;
+        InternalSetValue(name, value);
     }
 
-    public override int GetFieldCount() => _dic.Count;
-
-    public override IEnumerable<string> GetFieldNames() => _dic.Keys;
-
-    public override bool TryGetValue(string key, out object? value)
+    public bool TryGetValue(string name, out object? value)
     {
-        return _dic.TryGetValue(key, out value);
-    }
-
-    public T _<T>(string name)
-    {
-        var v = _dic[name];
-        return v is null ? default! : (T)v;
-    }
-
-    public object? _(string name)
-    {
-        return _dic[name];
+        return _dic.TryGetValue(name, out value);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Base;
+﻿using Base.PropertyCollections;
+using Base.PropertyCollections.Implementations;
 
 namespace Tests;
 
@@ -36,27 +37,27 @@ public class CountModule : PropertyCollectionModule
     public int BeforeGetCount { get; private set; }
     public int AfterGetCount { get; private set; }
 
-    public override void BeforeSetValue(string name, object value)
+    public override void BeforeSetValue(IPropertyCollection context, string name, object? value)
     {
         BeforeSetCount++;
-        base.BeforeSetValue(name, value);
+        base.BeforeSetValue(context, name, value);
     }
 
-    public override void AfterSetValue(string name, object value)
+    public override void AfterSetValue(IPropertyCollection context, string name, object? value)
     {
         AfterSetCount++;
-        base.AfterSetValue(name, value);
+        base.AfterSetValue(context, name, value);
     }
 
-    public override void BeforeGetValue(string name)
+    public override void BeforeGetValue(IPropertyCollection context, string name)
     {
         BeforeGetCount++;
-        base.BeforeGetValue(name);
+        base.BeforeGetValue(context, name);
     }
 
-    public override void AfterGetValue(string name, object value)
+    public override void AfterGetValue(IPropertyCollection context, string name, object? value)
     {
         AfterGetCount++;
-        base.AfterGetValue(name, value);
+        base.AfterGetValue(context, name, value);
     }
 }

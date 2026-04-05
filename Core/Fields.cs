@@ -15,10 +15,6 @@ public static class Fields
     public static IFieldDefinition Bool(string name, FieldDefinitionsOptions? options = null)
         => new BoolValueFieldDefinition(name, options ?? new FieldDefinitionsOptions());
 
-    public static IFieldDefinition Computed<TType>(string name, TryCompute<TType, IRecord> tryCompute,
-        FieldDefinitionsOptions? options = null, params string[] dependsOn) 
-        => new ComputedFieldDefinition<TType>(name, tryCompute, dependsOn, options ?? new FieldDefinitionsOptions());
-
     public static IFieldDefinition Reference(string name, string otherModelName, string? otherFieldName = null, 
         FieldDefinitionsOptions? options = null)
         => new ReferenceFieldDefinition(name, otherModelName, options ?? new FieldDefinitionsOptions(), otherFieldName);

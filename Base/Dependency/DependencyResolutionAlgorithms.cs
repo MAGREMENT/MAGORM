@@ -1,6 +1,4 @@
-﻿using Core.Abstract;
-
-namespace Core.Util;
+﻿namespace Base.Dependency;
 
 public static class DependencyResolutionAlgorithms
 {

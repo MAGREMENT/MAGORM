@@ -1,4 +1,4 @@
-﻿namespace Base;
+﻿namespace Base.PropertyCollections;
 
 public interface IPropertyCollection
 {
@@ -9,4 +9,8 @@ public interface IPropertyCollection
     void SetValue(string name, object? value);
     
     object? GetValue(string name);
+
+    void InsertModule(IPropertyCollectionModule module);
+
+    void AppendModule(IPropertyCollectionModule module);
 }

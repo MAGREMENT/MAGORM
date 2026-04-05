@@ -54,7 +54,7 @@ public class DatabaseTests
             db.AddModels(m1);
             db.Sync();
 
-            var r1 = db.GetModel("Books")!.Create<DictionaryTrackedRecord>(new Dictionary<string, object>
+            var r1 = db.GetModel("Books")!.Create<DictionaryRecord>(new Dictionary<string, object>
             {
                 {"Title", "Title Test"},
                 {"PageCount", 8},
@@ -62,7 +62,7 @@ public class DatabaseTests
                 {"SerialNumber", "123456"}
             });
 
-            var r1Selected = db.GetModel("Books")!.Select<DictionaryTrackedRecord>();
+            var r1Selected = db.GetModel("Books")!.Select<DictionaryRecord>();
             Assert.That(r1Selected, Has.Count.EqualTo(1));
             Assert.That(r1.AreCommonFieldsEqual(r1Selected[0]));
         }

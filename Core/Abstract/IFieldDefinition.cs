@@ -1,12 +1,12 @@
-﻿namespace Core.Abstract;
+﻿using Base;
 
-public interface IFieldDefinition : IDependencies, IAttachable<Model>
+namespace Core.Abstract;
+
+public interface IFieldDefinition : INamed, IAttachable<Model>
 {
     public FieldDefinitionsOptions Options { get; }
 
     public DBFieldType GetDBFieldType();
-
-    public bool IsStored();
     
     public ModelReference[] References { get; }
     
@@ -16,8 +16,9 @@ public interface IFieldDefinition : IDependencies, IAttachable<Model>
 
 public record ModelReference(string Model, string Field);
 
-public record FieldDefinitionsOptions(bool Required = false, 
-    bool Unique = false, 
+public record FieldDefinitionsOptions(
+    bool Required = false,
+    bool Unique = false,
     bool AutoIncrement = false);
 
 public enum DBFieldType

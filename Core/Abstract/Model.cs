@@ -1,11 +1,10 @@
-﻿using Core.Queries;
-using Core.Util;
+﻿using Base;
+using Core.Queries;
 
 namespace Core.Abstract;
 
 public abstract class Model : INamed, IAttachable<Database>
 {
-    private IReadOnlyList<IFieldDefinition>? _dependencyOrderedFieldDefinitions;
     private IReadOnlyList<string>? _allFieldsName;
     private Database? _database;
     
@@ -21,12 +20,6 @@ public abstract class Model : INamed, IAttachable<Database>
     public void Detach(Database obj)
     {
         _database = null;
-    }
-
-    public IReadOnlyList<IFieldDefinition> GetDependencyOrderedFieldDefinitions()
-    {
-        _dependencyOrderedFieldDefinitions ??= DependencyResolutionAlgorithms.Best(AllFieldDefinitions);
-        return _dependencyOrderedFieldDefinitions;
     }
 
     public void NoticeDirty(IRecord record, string field)
@@ -58,8 +51,6 @@ public abstract class Model : INamed, IAttachable<Database>
         var i = 0;
         foreach(var f in AllFieldDefinitions)
         {
-            if(!f.IsStored()) continue;
-            
             fieldSpecifications[i++] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
                 f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
 

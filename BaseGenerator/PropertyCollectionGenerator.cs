@@ -45,12 +45,8 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
             foreach (var attributeSyntax in attributeListSyntax.Attributes)
             {
                 var attributeSymbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, attributeSyntax).Symbol;
-                if (attributeSymbol is null)
-                {
-                    continue;
-                }
                 
-                if (attributeSymbol.ContainingType.ToDisplayString() == "Base.TrackedPropertyCollectionAttribute")
+                if (IsOrInherits(attributeSymbol?.ContainingType, "Base.PropertyCollections.TrackedPropertyCollectionAttribute"))
                 {
                     return ModelExtensions.GetDeclaredSymbol(context.SemanticModel, classSyntax) as INamedTypeSymbol;
                 }
@@ -58,6 +54,17 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
         }
         
         return null;
+    }
+
+    private static bool IsOrInherits(INamedTypeSymbol? symbol, string type)
+    {
+        while (symbol is not null)
+        {
+            if (symbol.ToDisplayString() == type) return true;
+            symbol = symbol.BaseType;
+        }
+
+        return false;
     }
 
     private string GenerateSetterAndGetters(INamedTypeSymbol symbol)
@@ -70,7 +77,7 @@ public class PropertyCollectionGenerator : IIncrementalGenerator
             var ok = false;
             foreach (var attr in prop.GetAttributes())
             {
-                if (attr.AttributeClass?.ToDisplayString() == "Base.TrackedPropertyAttribute")
+                if (IsOrInherits(attr.AttributeClass, "Base.PropertyCollections.TrackedPropertyAttribute"))
                 {
                     ok = true;
                     break;

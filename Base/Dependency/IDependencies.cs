@@ -1,4 +1,4 @@
-﻿namespace Core.Abstract;
+﻿namespace Base;
 
 public interface IDependencies : INamed
 {

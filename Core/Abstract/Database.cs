@@ -74,33 +74,23 @@ public class Database
         var result = new TRecord[values.Length];
         var stacker = new QueryStacker();
         var fieldNames = new List<string>();
-        var fields = model.GetDependencyOrderedFieldDefinitions();
+        var fields = model.AllFieldDefinitions;
         
         for(int i = 0; i < values.Length; i++)
         {
             var val = values[i];
 
             var record = new TRecord();
-            record.Attach(model);
             result[i] = record;
             
             foreach (var field in fields)
             {
-                object? v;
-                if (!field.IsStored())
-                {
-                    field.TryComputeValue(null, record, out v);
-                    record.SetValue(field.Name, v, true);
-                    
-                    continue;
-                }
-                
-                if (val.TryGetValue(field.Name, out v))
+                if (val.TryGetValue(field.Name, out var v))
                 {
                     if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
                     
                     fieldNames.Add(field.Name);
-                    record.SetValue(field.Name, r, true);
+                    record.InitValue(field.Name, r);
                     stacker.AddParameter(r!);
                 }
                 else if (field.Options is { Required: true, AutoIncrement: false }) throw new Exception(); //TODO maybe not exception
@@ -130,21 +120,22 @@ public class Database
         } else (whereSpecification, parameters) = where.Compile();
         
         var query = _queryBuilder.Select(new SelectSpecification(model.Name, fieldNames, whereSpecification, [])); //TODO order by
-
         
         return _engine.ExecuteResult<List<T>>(queryResult => CreateRecordsFromQueryResult<T>(queryResult, model), 
             query, parameters);
     }
-
-    private List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult, Model model)
+    
+    public Model? GetModel<TModel>() => _modelBank.GetModel<TModel>();
+    public Model? GetModel(string name) => _modelBank.GetModel(name);
+    
+    private static List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult, Model model)
         where T : IRecord, new()
     {
-        var fields = model.GetDependencyOrderedFieldDefinitions();
+        var fields = model.AllFieldDefinitions;
         var result = new List<T>();
         while (queryResult.Next())
         {
             var record = new T();
-            record.Attach(model);
             result.Add(record);
 
             foreach (var definition in fields)
@@ -152,15 +143,12 @@ public class Database
                 var stringValue = queryResult.TryGetValue(definition.Name, out var v) ? v : null;
                 if (!definition.TryComputeValue(stringValue, record, out var value)) throw new Exception(); //TODO
                 
-                record.SetValue(definition.Name, value, true);
+                record.InitValue(definition.Name, value);
             }
         }
 
         return result;
     }
-
-    public Model? GetModel<TModel>() => _modelBank.GetModel<TModel>();
-    public Model? GetModel(string name) => _modelBank.GetModel(name);
 }
 
 public record RecordChange(IRecord Record, HashSet<string> Fields);

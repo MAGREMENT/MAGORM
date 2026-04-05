@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Base;
+namespace Base.PropertyCollections.Implementations;
 
 public abstract class ClassPropertyCollection : PropertyCollection
 {
@@ -20,8 +20,7 @@ public abstract class ClassPropertyCollection : PropertyCollection
 
     private PropertyInfo? FindProperty(string name)
     {
-        var type = GetType();
-        foreach (var prop in type.GetProperties())
+        foreach (var prop in GetType().GetProperties())
         {
             if (prop.Name == name)
             {

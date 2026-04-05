@@ -2,31 +2,28 @@
 
 namespace Core.FieldDefinitions;
 
-public class ReferenceFieldDefinition(string name, string _otherModelName, FieldDefinitionsOptions options, string? otherModelField = null) 
+public class ReferenceFieldDefinition(string name, string _otherModelName, FieldDefinitionsOptions options, 
+    string? otherModelField = null) 
     : IFieldDefinition
 {
-    public IFieldDefinition? ReferenceField { get; private set; }
+    private IFieldDefinition? _referenceField;
 
     public string Name { get; } = name;
-    public IReadOnlyList<string> DependsOn => [];
     public FieldDefinitionsOptions Options { get; } = options with { AutoIncrement = false};
+    public ModelReference[] References { get; private set; } = [];
 
     public DBFieldType GetDBFieldType()
     {
-        if (ReferenceField is null) throw new ArgumentException(); //TODO
+        if (_referenceField is null) throw new ArgumentException(); //TODO
         
-        return ReferenceField.GetDBFieldType();
+        return _referenceField.GetDBFieldType();
     }
-
-    public bool IsStored() => true;
-
-    public ModelReference[] References { get; private set; } = [];
 
     public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord
     {
-        if (ReferenceField is null) throw new ArgumentException(); //TODO
+        if (_referenceField is null) throw new ArgumentException(); //TODO
         
-        return ReferenceField.TryComputeValue(value, record, out result);
+        return _referenceField.TryComputeValue(value, record, out result);
     }
 
     public void Attach(Model obj)
@@ -40,13 +37,13 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
 
         if (field is null) throw new ArgumentException(); //TODO
 
-        ReferenceField = field;
+        _referenceField = field;
         References = [new ModelReference(otherModel.Name, field.Name)];
     }
 
     public void Detach(Model obj)
     {
-        ReferenceField = null;
+        _referenceField = null;
         References = [];
     }
 }
