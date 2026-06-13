@@ -2,20 +2,20 @@
 
 public static class DependencyResolutionAlgorithms
 {
-    public static T[] Best<T>(IReadOnlyCollection<T> dependencies) where T : IDependencies
-        => ResolveMultiPass(dependencies);
+    public static T[] Best<T>(IDependencyCollection<T> collection) where T : INamed
+        => ResolveMultiPass(collection);
 
-    public static T[] ResolveMultiPass<T>(IReadOnlyCollection<T> dependencies) where T : IDependencies
+    public static T[] ResolveMultiPass<T>(IDependencyCollection<T> collection) where T : INamed
     {
-        var result = new T[dependencies.Count];
+        var result = new T[collection.Count];
         var resultIndex = 0;
         var done = new HashSet<string>();
-        var buffer = new T[dependencies.Count - 1];
+        var buffer = new T[collection.Count - 1];
         var bufferIndex = 0;
 
-        foreach (var d in dependencies)
+        foreach (var d in collection.Enumerate())
         {
-            if (d.DependsOn.Count == 0)
+            if (collection.GetDependsOnCount(d) == 0)
             {
                 result[resultIndex++] = d;
                 done.Add(d.Name);
@@ -31,7 +31,7 @@ public static class DependencyResolutionAlgorithms
             for (int i = 0; i < bufferIndex; i++)
             {
                 var ok = true;
-                foreach (var name in buffer[i].DependsOn)
+                foreach (var name in collection.GetDependsOn(buffer[i]))
                 {
                     if (!done.Contains(name))
                     {

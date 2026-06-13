@@ -1,0 +1,129 @@
+﻿using System.Data.Common;
+using Microsoft.Data.Sqlite;
+using ORM.Abstract;
+using ORM.Queries;
+using ORM.Queries.Common;
+using ORM.Queries.Specifications;
+
+namespace ORM.SQLite.Microsoft;
+
+public class SQLiteDatabaseEngine(string connectionString) : CommonDatabaseEngine<SqliteConnection>
+{
+    protected override SqliteConnection CreateConnection()
+    {
+        return new SqliteConnection(connectionString);
+    }
+
+    protected override DbCommand CreateCommand(string query, SqliteConnection connection)
+    {
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = query;
+        return cmd;
+    }
+
+    public override ITransaction CreateTransaction()
+    {
+        var con = CreateConnection();
+        con.Open();
+        return new SQLiteTransactionWrapper(con);
+    }
+
+    public override IReadOnlyList<CreateSpecification> GetModelSchemas() //TODO unique & fk contraints
+    {
+        var result = new List<CreateSpecification>();
+        var fields = new List<FieldSpecification>();
+
+        foreach (var name in EnumerateTables())
+        {
+            PrimaryKeySpecification? pk = null;
+
+            using var pragmaCon = CreateConnection();
+            pragmaCon.Open();
+            using var pragmaCmd = CreateCommand($"PRAGMA table_info({name})", pragmaCon);
+
+            using var pragmaReader = pragmaCmd.ExecuteReader();
+            while (pragmaReader.Read())
+            {
+                var fieldName = pragmaReader.GetString(pragmaReader.GetOrdinal("name"));
+                if (pragmaReader.GetBoolean(pragmaReader.GetOrdinal("pk")))
+                {
+                    if (pk is not null) throw new Exception(); //TODO
+                    pk = new PrimaryKeySpecification(fieldName);
+                }
+
+                var type = pragmaReader.GetString(pragmaReader.GetOrdinal("type")) switch
+                {
+                    "INTEGER" => DBFieldType.INT,
+                    "TEXT" => DBFieldType.STRING, //TODO handle bools
+                    _ => throw new Exception() //TODO
+                };
+
+                var notNull = pragmaReader.GetBoolean(pragmaReader.GetOrdinal("notnull"));
+                
+                fields.Add(new FieldSpecification(fieldName, type, false, notNull, false));
+            }
+
+            if (pk is null) throw new Exception(); //TODO
+            
+            result.Add(new CreateSpecification(name, fields.ToArray(), pk, []));
+            fields.Clear();
+        }
+        
+        return result;
+    }
+
+    public override void DropAllTables()
+    {
+        var names = EnumerateTables().ToArray().Reverse();
+
+        foreach (var name in names)
+        {
+            //TODO need to take into account foreign keys ?
+            using var con = CreateConnection();
+            con.Open();
+            using var cmd = CreateCommand($"DROP TABLE {name};", con);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    private IEnumerable<string> EnumerateTables()
+    {
+        using var con = CreateConnection();
+        con.Open();
+        using var cmd = CreateCommand("SELECT name\n" + 
+                                      "FROM sqlite_schema\n" +
+                                      "WHERE type = \"table\" AND name NOT LIKE \"sqlite_%\";", con);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            yield return reader.GetString(0);
+        }
+    }
+}
+
+public class SQLiteTransactionWrapper : CommonTransaction<SqliteConnection>
+{
+    private readonly SqliteTransaction _transaction;
+
+    public SQLiteTransactionWrapper(SqliteConnection connection) : base(connection)
+    {
+        _transaction = connection.BeginTransaction();
+    }
+
+    protected override DbCommand CreateCommand(string query, SqliteConnection connection)
+    {
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = query;
+        return cmd;
+    }
+
+    public override bool Commit()
+    {
+        _transaction.Commit();
+        _transaction.Dispose();
+        _transaction.Connection?.Dispose();
+
+        return true;
+    }
+}

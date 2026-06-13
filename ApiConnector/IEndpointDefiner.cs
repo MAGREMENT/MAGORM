@@ -1,13 +1,20 @@
-﻿namespace ApiConnector;
+﻿namespace APIConnector;
 
 public interface IEndpointDefiner
 {
-    void Define<T>(EndpointType type, string route, Dictionary<string, Type> schema, EndpointOperation<T> operation);
+    void Define<T>(EndpointSpecification<T> spec);
 }
+
+public delegate void DefineEndpoint<T>(EndpointSpecification<T> spec);
+
+public record EndpointSpecification<T>(
+    EndpointType Type,
+    string Route,
+    EndpointOperation<T> Operation);
 
 public delegate object? EndpointOperation<in T>(T parameters);
 
 public enum EndpointType
 {
-    GET, POST, SET, DELETE
+    GET, POST, PUT, DELETE
 }

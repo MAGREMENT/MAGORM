@@ -1,6 +1,6 @@
-﻿namespace ApiConnector;
+﻿namespace APIConnector;
 
 public interface IEndpointProperty;
 
 [AttributeUsage(AttributeTargets.Property)]
-public class EndpointPropertyAttribute : Attribute, IEndpointProperty;
+public class EndpointFieldAttribute : Attribute, IEndpointProperty;
