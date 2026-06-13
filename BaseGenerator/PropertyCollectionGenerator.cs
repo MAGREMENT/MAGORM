@@ -16,7 +16,7 @@ public static class PropertyCollectionGenerator
         var declarations = context.SyntaxProvider
             .CreateSyntaxProvider(IsSyntaxTargetForGeneration,
                 GetSemanticTargetForGeneration)
-            .Where(Generator.IsValidSyntax);
+            .Where(GeneratorHelper.IsValidSyntax);
         
         context.RegisterSourceOutput(declarations, (spc, symbol) =>
         {
@@ -41,7 +41,7 @@ public static class PropertyCollectionGenerator
             {
                 var attributeSymbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, attributeSyntax).Symbol;
                 
-                if (Generator.IsOrInherits(attributeSymbol?.ContainingType, "Base.Fields.SideEffectFieldCollectionAttribute"))
+                if (GeneratorHelper.IsOrInherits(attributeSymbol?.ContainingType, "Base.Fields.SideEffectFieldCollectionAttribute"))
                 {
                     return ModelExtensions.GetDeclaredSymbol(context.SemanticModel, classSyntax) as INamedTypeSymbol;
                 }
@@ -59,7 +59,7 @@ public static class PropertyCollectionGenerator
             var ok = false;
             foreach (var attr in prop.GetAttributes())
             {
-                if (Generator.IsOrInherits(attr.AttributeClass, "Base.Fields.SideEffectFieldAttribute"))
+                if (GeneratorHelper.IsOrInherits(attr.AttributeClass, "Base.Fields.SideEffectFieldAttribute"))
                 {
                     ok = true;
                     break;

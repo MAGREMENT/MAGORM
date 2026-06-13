@@ -3,7 +3,7 @@
 public interface IRecordCache
 {
     void SetRecord(Model model, IRecord record);
-    bool TryGetRecord(Model model, object primaryKey, out IRecord record);
+    bool TryGetRecord(Model model, object primaryKey, out IRecord? record);
     IEnumerable<IRecord> EnumerateRecords(Model model);
 }
 
@@ -22,7 +22,7 @@ public class DictionaryRecordCache : Dictionary<Model, Dictionary<object, IRecor
         dic[pkValue] = record;
     }
 
-    public bool TryGetRecord(Model model, object primaryKey, out IRecord record)
+    public bool TryGetRecord(Model model, object primaryKey, out IRecord? record)
     {
         if (!TryGetValue(model, out var dic))
         {

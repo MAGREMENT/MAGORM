@@ -3,7 +3,7 @@ using ORM.Abstract;
 
 namespace ORM.RecordTypes;
 
-public class TrackedSideEffect(Model model) : IFieldSideEffect //TODO just put this in Model class
+/*public class TrackedSideEffect(Model model) : IFieldSideEffect //TODO just put this in Model class
 {
     public object? OnGet<T>(FieldSideEffectEnumerator<T> enumerator, string name) where T : IFieldCollection
     {
@@ -15,4 +15,4 @@ public class TrackedSideEffect(Model model) : IFieldSideEffect //TODO just put t
         enumerator.NextSet(name, value);
         model.NoticeDirty((IRecord)enumerator.Subject, name);
     }
-}
+}*/

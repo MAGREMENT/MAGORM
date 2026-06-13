@@ -3,11 +3,11 @@ using ORM.Abstract;
 
 namespace ORM.RecordTypes;
 
-public class DictionarySideEffectRecord : DictionarySideEffectFieldCollection, IRecord
+public class DictionaryRecord : DictionaryFieldCollection, IRecord
 {
     public void Init(string name, object? value)
     {
-        InternalSetValue(name, value);
+        Set(name, value);
     }
 
     public bool TryGet(string name, out object? value)

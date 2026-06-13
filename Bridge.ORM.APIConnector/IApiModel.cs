@@ -31,6 +31,6 @@ public static class EndpointModelExtensions
     private static EndpointSpecification<RecordDictionary[]> GetCreateSpec(IModel model)
     {
         return new EndpointSpecification<RecordDictionary[]>(EndpointType.POST, "/" + model.Name.ToLower() + "/create", 
-            (records) => model.Create<DictionarySideEffectRecord>(records));
+            (records) => model.Create<DictionaryRecord>(records));
     }
 }

@@ -59,12 +59,12 @@ public class DatabaseTests
             db.AddModels(m2);
             db.Sync();
 
-            var r1 = db.GetModel("Author")!.Create<DictionarySideEffectRecord>(new RecordDictionary
+            var r1 = db.GetModel("Author")!.Create<DictionaryRecord>(new RecordDictionary
             {
                 {"Name", "Some Author"}
             });
 
-            var r2 = db.GetModel("Books")!.Create<DictionarySideEffectRecord>(new RecordDictionary
+            var r2 = db.GetModel("Books")!.Create<DictionaryRecord>(new RecordDictionary
             {
                 {"Title", "Title Test"},
                 {"PageCount", 8},
@@ -73,11 +73,11 @@ public class DatabaseTests
                 {"Author", r1}
             });
 
-            var r2Selected = db.GetModel("Books")!.Select<DictionarySideEffectRecord>();
+            var r2Selected = db.GetModel("Books")!.Select<DictionaryRecord>();
             Assert.That(r2Selected, Has.Count.EqualTo(1));
             Assert.That(r2.AreCommonFieldsEqual(r2Selected[0]));
 
-            r2Selected = db.GetModel("Books")!.Select<DictionarySideEffectRecord>(null, "Author.Name");
+            r2Selected = db.GetModel("Books")!.Select<DictionaryRecord>(null, "Author.Name");
             Assert.That(r2Selected[0].Get("Author") is IRecord, Is.True);
             Assert.That(r2Selected[0]._<IRecord>("Author").Get("Name"), Is.EqualTo(r1.Get("Name")));
         }

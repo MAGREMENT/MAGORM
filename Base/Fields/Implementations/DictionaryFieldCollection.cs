@@ -1,25 +1,25 @@
 ﻿namespace Base.Fields.Implementations;
 
-public class DictionarySideEffectFieldCollection : SideEffectFieldCollection
+public class DictionaryFieldCollection : IFieldCollection
 {
     protected readonly Dictionary<string, object?> _dic = new();
     
-    public override int GetFieldCount()
+    public int GetFieldCount()
     {
         return _dic.Count;
     }
 
-    public override IEnumerable<string> GetFieldsName()
+    public IEnumerable<string> GetFieldsName()
     {
         return _dic.Keys;
     }
 
-    protected override void InternalSetValue(string name, object? value)
+    public void Set(string name, object? value)
     {
         _dic[name] = value;
     }
 
-    protected override object? InternalGetValue(string name)
+    public object? Get(string name)
     {
         return _dic[name];
     }

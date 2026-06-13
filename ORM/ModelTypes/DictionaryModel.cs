@@ -35,5 +35,5 @@ public class DictionaryModel : Model
     public override IFieldDefinition? GetFieldDefinition(ReadOnlySpan<char> name) => _dic.GetValueOrDefault(name.ToString(), null!);
 
     public override IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions => _dic.Values;
-    public override IRecord InstantiateRecord() => new DictionarySideEffectRecord(); //TODO change
+    public override IRecord InstantiateRecord() => new DictionaryRecord(); //TODO change
 }
