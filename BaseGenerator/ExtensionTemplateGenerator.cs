@@ -84,7 +84,7 @@ public static class ExtensionTemplateGenerator
             CreateBaseMethod(baseBuilder, method);
         }
 
-        var collectionType = attr.ExtensionName + "ExtensionCollection";
+        var collectionType = attr.Symbol.Name.Substring(1) + "ExtensionCollection";
         var finalSource = $$"""
                             using Base.Extensibility;
                             
@@ -201,4 +201,9 @@ public static class ExtensionTemplateGenerator
         isEnabledByDefault: true);
 }
 
-internal record ExtensionTemplateAttributes(INamedTypeSymbol Symbol, string? ExtensionName, string? BaseName);
+internal class ExtensionTemplateAttributes(INamedTypeSymbol Symbol, string? ExtensionName, string? BaseName)
+{
+    public readonly INamedTypeSymbol Symbol = Symbol;
+    public readonly string? ExtensionName = ExtensionName;
+    public readonly string? BaseName = BaseName;
+}

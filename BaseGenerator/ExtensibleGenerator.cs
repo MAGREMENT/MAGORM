@@ -58,9 +58,10 @@ public static class ExtensibleGenerator //TODO generalize the pipeline a bit, a 
             var wantedInterface = compilation.GetTypeByMetadataName(fullInterfaceName);
             if (wantedInterface is null) continue;
             
-            collectionDeclarationsBuilder.Append("\n\tprivate IExtensionCollection<");
-            collectionDeclarationsBuilder.Append(extension);
-            collectionDeclarationsBuilder.Append(">? _extensionCollection");
+            var collectionType = extension.Substring(1) + "ExtensionCollection";
+            collectionDeclarationsBuilder.Append("\n\tprivate ");
+            collectionDeclarationsBuilder.Append(collectionType);
+            collectionDeclarationsBuilder.Append("? _extensionCollection");
             collectionDeclarationsBuilder.Append(n);
             collectionDeclarationsBuilder.Append(';');
 
@@ -69,9 +70,9 @@ public static class ExtensibleGenerator //TODO generalize the pipeline a bit, a 
             setExtensionBuilder.Append("))\n\t\t{\n\t\t\t");
             setExtensionBuilder.Append("_extensionCollection");
             setExtensionBuilder.Append(n);
-            setExtensionBuilder.Append(" = (IExtensionCollection<");
-            setExtensionBuilder.Append(extension);
-            setExtensionBuilder.Append(">)collection;\n\t\t\treturn;\n\t\t}");
+            setExtensionBuilder.Append(" = (");
+            setExtensionBuilder.Append(collectionType);
+            setExtensionBuilder.Append(")collection;\n\t\t\treturn;\n\t\t}");
 
             foreach (var method in wantedInterface.GetMembers().OfType<IMethodSymbol>())
             {
@@ -101,6 +102,7 @@ public static class ExtensibleGenerator //TODO generalize the pipeline a bit, a 
                 }
 
                 extensionMethodsBuilder.Append("\t\telse ");
+                if (!method.ReturnsVoid) extensionMethodsBuilder.Append("return ");
                 extensionMethodsBuilder.Append("_extensionCollection");
                 extensionMethodsBuilder.Append(n);
                 extensionMethodsBuilder.Append('.');
@@ -140,4 +142,8 @@ public static class ExtensibleGenerator //TODO generalize the pipeline a bit, a 
     }
 }
 
-public record ExtensibleAttributes(INamedTypeSymbol Symbol, string[] Extensions);
+public class ExtensibleAttributes(INamedTypeSymbol Symbol, string[] Extensions)
+{
+    public readonly INamedTypeSymbol Symbol = Symbol;
+    public readonly string[] Extensions = Extensions;
+}
