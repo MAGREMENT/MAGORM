@@ -22,16 +22,22 @@ public static class GeneratorHelper
         return false;
     }
     
-    public static void CreateMethodSignature(StringBuilder builder, IMethodSymbol symbol, Action<StringBuilder>? additionalParameters = null)
+    public static void CreateMethodSignature(StringBuilder builder, IMethodSymbol symbol, 
+        Action<StringBuilder>? additionalParameters = null, params string[] methodQualifier)
     {
         builder.Append("\tpublic ");
+        foreach (var q in methodQualifier)
+        {
+            builder.Append(q);
+            builder.Append(' ');
+        }
         builder.Append(symbol.ReturnType.ToDisplayString());
         builder.Append(' ');
         builder.Append(symbol.Name);
         builder.Append('(');
-        for (int i = 1; i < symbol.Parameters.Length; i++)
+        for (int i = 0; i < symbol.Parameters.Length; i++)
         {
-            if (i != 1) builder.Append(", ");
+            if (i != 0) builder.Append(", ");
             builder.Append(symbol.Parameters[i].Type.ToDisplayString());
             builder.Append(' ');
             builder.Append(symbol.Parameters[i].Name);

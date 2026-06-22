@@ -2,65 +2,74 @@
 
 namespace Tests;
 
+/*TODO Improve extensibility
+ - Have method specific extension chain
+ - Add the possibility of adding new functions (?)
+ - Add the possibility of adding new properties (?)
+ */
 public class ExtensibilityTests
 {
     [Test]
     public void CarTests()
     {
         var car = new Car();
-        Assert.That(car.ChangeGear(2), Is.False);
-        Assert.That(car.Gear, Is.EqualTo(1));
+        Assert.That(car.ChangeGear(2), Is.True);
+        Assert.That(car.Gear, Is.EqualTo(2));
+        Assert.That(car.ChangeGear(6), Is.True);
+        Assert.That(car.Gear, Is.EqualTo(6));
         
         var collection = new CarExtensionExtensionCollection();
         car.SetExtensionCollection(collection);
         
-        Assert.That(car.ChangeGear(2), Is.False);
-        Assert.That(car.Gear, Is.EqualTo(1));
+        Assert.That(car.ChangeGear(3), Is.True);
+        Assert.That(car.Gear, Is.EqualTo(3));
+        Assert.That(car.ChangeGear(-1), Is.True);
+        Assert.That(car.Gear, Is.EqualTo(-1));
 
-        collection.Add(new FiveGearCar());
+        collection.Add(new FiveGearCarExtension());
         Assert.That(car.ChangeGear(2), Is.True);
+        Assert.That(car.Gear, Is.EqualTo(2));
+        Assert.That(car.ChangeGear(7), Is.False);
         Assert.That(car.Gear, Is.EqualTo(2));
     }
 }
 
-[Extensible(nameof(ICarExtension))]
-public partial class Car
-{
-    public int Gear = 1;
-    public int Speed = 0;
-    
-    [ExtensionBaseMethod(nameof(ICarExtension.ChangeGear))]   
-    public bool BaseChangeGear(int newGear)
-    {
-        return false;
-    }
-}
+public partial class CarExtension;
 
 public partial struct CarBase;
 
-[ExtensionTemplate(nameof(Car), nameof(CarBase))]
-public interface ICarExtension
+[ExtensibleClass(nameof(CarExtension), nameof(CarBase))]
+public partial class Car
 {
-    public bool ChangeGear(CarBase b, int newGear);
+    private int _gear = 1;
+    private double _speed;
 
-    public void Accelerate(CarBase b, double strength);
-}
+    public int Gear => _gear;
+    public double Speed => _speed;
 
-public class FiveGearCar : ICarExtension
-{
-    public bool ChangeGear(CarBase b, int newGear)
+    [ExtensibleMethod(nameof(BaseChangeGear))]
+    public partial bool ChangeGear(int newGear);
+
+    public bool BaseChangeGear(int newGear)
     {
-        if (newGear <= 5)
-        {
-            b.Subject.Gear = newGear;
-            return true;
-        }
-
-        return false;
+        _gear = newGear;
+        return true;
     }
 
-    public void Accelerate(CarBase b, double strength)
+    [ExtensibleMethod(nameof(BaseAccelerate))]
+    public partial void Accelerate(double strength);
+
+    public void BaseAccelerate(double strength)
     {
-        b.Accelerate(strength);
+        _speed = _gear * strength;
+    }
+}
+
+public class FiveGearCarExtension : CarExtension
+{
+    public override bool ChangeGear(int newGear, CarBase previous)
+    {
+        if (newGear is < 1 or > 5) return false;
+        return previous.ChangeGear(newGear);
     }
 }
