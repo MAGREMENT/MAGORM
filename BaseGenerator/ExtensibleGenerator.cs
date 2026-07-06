@@ -69,6 +69,7 @@ public static class ExtensibleGenerator
         
         var sourceHeader = $"""
         using Base.Extensibility;
+        using System.Reflection;
         
         namespace {attr.Symbol.ContainingNamespace.ToDisplayString()};
         
@@ -136,9 +137,9 @@ public static class ExtensibleGenerator
         }
         else
         {
-            builder.Append("return");
-            if (!method.Symbol.ReturnsVoid) builder.Append(" default");
-            builder.Append(";\n");
+            builder.Append("throw new MissingBehaviorException(nameof(");
+            builder.Append(method.Symbol.Name);
+            builder.Append("));\n");
         }
 
         builder.Append("\t\telse ");
@@ -166,7 +167,7 @@ public static class ExtensibleGenerator
         }
 
         var result = $$"""
-                 public partial struct {{baseName}}
+                 public readonly partial struct {{baseName}}
                  {
                      public readonly {{extendedName}} Subject;
                      private readonly {{collectionName}} _collection;
@@ -207,9 +208,9 @@ public static class ExtensibleGenerator
         string extendedName, IReadOnlyList<ExtensibleMethodAttributes> methodList)
     {
         var methodBuilder = new StringBuilder();
-        foreach (var method in methodList)
+        for(int i = 0; i < methodList.Count; i++)
         {
-            var diag = CreateCollectionMethod(methodBuilder, method, extendedName, baseName);
+            var diag = CreateCollectionMethod(methodBuilder, methodList[i], extendedName, baseName, i);
             if (diag is not null) return diag;
         }
         
@@ -226,7 +227,7 @@ public static class ExtensibleGenerator
     }
     
     private static DiagnosticDescriptor? CreateCollectionMethod(StringBuilder builder, ExtensibleMethodAttributes method, string extendedName, 
-        string baseName)
+        string baseName, int identifier)
     {
         var symbol = method.Symbol;
         GeneratorHelper.CreateMethodSignature(builder, symbol, b =>
@@ -236,9 +237,12 @@ public static class ExtensibleGenerator
             b.Append(" subject, int state");
         });
 
-        builder.Append("\t\tif(state < Count) ");
+        builder.Append("\t\tvar next = Next(state, ");
+        builder.Append(identifier);
+        builder.Append(");\n");
+        builder.Append("\t\tif(next is not null) ");
         if (!symbol.ReturnsVoid) builder.Append("return ");
-        builder.Append("this[state].");
+        builder.Append("next.");
         builder.Append(symbol.Name);
         builder.Append('(');
         int i = 0;
@@ -253,9 +257,9 @@ public static class ExtensibleGenerator
         builder.Append("(subject, this, state + 1)");
 
         builder.Append(");\n");
+        builder.Append("\t\telse ");
         if (method.BaseImplementation is not null)
         {
-            builder.Append("\t\telse ");
             if (!symbol.ReturnsVoid) builder.Append("return ");
             builder.Append("subject.");
             builder.Append(method.BaseImplementation);
@@ -267,7 +271,13 @@ public static class ExtensibleGenerator
             }
             builder.Append(");\n");
         }
-        else if (!symbol.ReturnsVoid) return BaseMethodNotFound;
+        else
+        {
+            if (symbol.ReturnsVoid) builder.Append("if (state == BaseState) ");
+            builder.Append("throw new MissingBehaviorException(nameof(");
+            builder.Append(method.Symbol.Name);
+            builder.Append("));\n");
+        }
         
         builder.Append("\t}\n\n");
         return null;
@@ -277,14 +287,29 @@ public static class ExtensibleGenerator
         IReadOnlyList<ExtensibleMethodAttributes> methodList)
     {
         var methodBuilder = new StringBuilder();
-        foreach (var method in methodList)
+        var switchBuilder = new StringBuilder();
+        for(int i = 0; i < methodList.Count; i++)
         {
-            CreateExtensionMethod(methodBuilder, method.Symbol, baseName);
+            CreateExtensionMethod(methodBuilder, methodList[i].Symbol, baseName);
+            switchBuilder.Append("\t\t\"");
+            switchBuilder.Append(methodList[i].Symbol.Name);
+            switchBuilder.Append("\" => ");
+            switchBuilder.Append(i);
+            switchBuilder.Append(",\n");
         }
         
         var result = $$"""
-        public partial class {{extensionName}}
+        public partial class {{extensionName}} : DynamicReflectiveExtension
         {
+        
+        protected override int GetMethodNumber(MethodInfo method) {
+            return method.Name switch
+            {
+        {{switchBuilder}}
+                _ => -1
+            };
+        }
+        
         {{methodBuilder}}
         }               
         """;

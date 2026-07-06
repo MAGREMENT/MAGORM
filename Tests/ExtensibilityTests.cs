@@ -3,14 +3,13 @@
 namespace Tests;
 
 /*TODO Improve extensibility
- - Have method specific extension chain
  - Add the possibility of adding new functions (?)
  - Add the possibility of adding new properties (?)
  */
 public class ExtensibilityTests
 {
     [Test]
-    public void CarTests()
+    public void SimpleExtensionTest()
     {
         var car = new Car();
         Assert.That(car.ChangeGear(2), Is.True);
@@ -32,27 +31,41 @@ public class ExtensibilityTests
         Assert.That(car.ChangeGear(7), Is.False);
         Assert.That(car.Gear, Is.EqualTo(2));
     }
+
+    [Test]
+    public void MissingBehaviorTest()
+    {
+        var car = new Car();
+        Assert.Throws<MissingBehaviorException>(() => car.Fly(10));
+
+        var collection = new CarExtensionExtensionCollection();
+        car.SetExtensionCollection(collection);
+        Assert.Throws<MissingBehaviorException>(() => car.Fly(10));
+        
+        collection.Add(new FiveGearCarExtension());
+        Assert.Throws<MissingBehaviorException>(() => car.Fly(10));
+        
+        collection.Add(new FlyingCarExtension());
+        Assert.DoesNotThrow(() => car.Fly(10));
+    }
 }
 
 public partial class CarExtension;
 
-public partial struct CarBase;
+public readonly partial struct CarBase;
 
 [ExtensibleClass(nameof(CarExtension), nameof(CarBase))]
 public partial class Car
 {
-    private int _gear = 1;
-    private double _speed;
-
-    public int Gear => _gear;
-    public double Speed => _speed;
+    public int Gear { get; set; } = 1;
+    public double Speed { get; set; }
 
     [ExtensibleMethod(nameof(BaseChangeGear))]
     public partial bool ChangeGear(int newGear);
 
     public bool BaseChangeGear(int newGear)
     {
-        _gear = newGear;
+        Gear = newGear;
         return true;
     }
 
@@ -61,8 +74,11 @@ public partial class Car
 
     public void BaseAccelerate(double strength)
     {
-        _speed = _gear * strength;
+        Speed = Gear * strength;
     }
+
+    [ExtensibleMethod]
+    public partial void Fly(double strength);
 }
 
 public class FiveGearCarExtension : CarExtension
@@ -71,5 +87,13 @@ public class FiveGearCarExtension : CarExtension
     {
         if (newGear is < 1 or > 5) return false;
         return previous.ChangeGear(newGear);
+    }
+}
+
+public class FlyingCarExtension : CarExtension
+{
+    public override void Fly(double strength, CarBase previous)
+    {
+        previous.Subject.Speed *= strength;
     }
 }
