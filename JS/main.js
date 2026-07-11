@@ -20,10 +20,9 @@ class ComponentElement extends HTMLElement {
 
 export async function addComponent(component) {
     const info = {
-        template: new Template(component.name.toLowerCase() + ".html"),
+        template: await Template.fromFile(component.name.toLowerCase() + ".html"),
         component: component
     }
-    await info.template.init();
 
     const tagName = 'app-' + component.name.toLowerCase();
     component_registry.set(tagName, info);

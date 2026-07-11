@@ -3,10 +3,15 @@
     <p>
         Number: {{count}}
     </p>
+    <!--This is a comment-->
     <button @click="increase">
         Increase
     </button>
     <p *for="user" *of="users">
         Hey {{user.name}}
     </p>
+    <p ?if="show">
+        This is conditional
+    </p>
+    <button @click="toggleShow">Show</button>
 </div>

@@ -1,8 +1,12 @@
 import { Template } from "./template.js";
 
 class UpdatePolicy {
-    onComponentRender(component) {
+    onTemplateAttached(component) {
         
+    }
+
+    onBindingRender(component, element) {
+
     }
 
     async callEvent(component, funcName, ev) {
@@ -18,24 +22,38 @@ class FullRenderOnEvent extends UpdatePolicy {
 }
 
 class PartialRenderOnEvent extends UpdatePolicy {
-    onComponentRender(component) {
-        component.updateMap = Template.getUpdateMap(component.root, component.template.bindings);
+    onTemplateAttached(component) {
+        component.updateMap = new Map();
     }
 
-    async callEvent(component, funcName, ev) { //TODO can be optimized since we risk calling the same applyToElement multiple times
-        debugger;
+    onBindingRender(binding, component, element) {
+        const all = binding.getAllReferences();
+        if(!all) return;
+
+        for(var ref of all){
+            let list = component.updateMap.get(ref);
+            if(!list) {
+                list = [];
+                component.updateMap.set(ref, list);
+            }
+
+            list.push({element, binding});
+        }
+    }
+
+    async callEvent(component, funcName, ev) { //TODO can be optimized since we risk calling the same render multiple times
         const stateBefore = {...component}
         super.callEvent(component, funcName, ev);
         for(const entry of component.updateMap.entries()) {
             if(stateBefore[entry[0]] !== component[entry[0]]) {
                 for(const update of entry[1]) {
-                    update.reference.applyToElement(update.node, component)
+                    update.element = update.binding.update(update.element, component)
                 }
             }
         }
     }
 }
 
-export const updatePolicy = new PartialRenderOnEvent();
+export const defaultUpdatePolicy = new PartialRenderOnEvent();
 
 //TODO Other policies

@@ -1,8 +1,8 @@
-import { updatePolicy } from "./update_policy.js";
-
 export class Component {
     attachTemplate(template) {
         this.template = template;
+        this.template.updatePolicy.onTemplateAttached(this);
+
         this.root = template.render(this);
         this.onRender();
     }
@@ -15,6 +15,6 @@ export class Component {
     }
 
     onRender() {
-        updatePolicy.onComponentRender(this);
+
     }
 }

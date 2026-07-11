@@ -1,25 +1,34 @@
 import { walkDom, getDomNode } from "./util.js";
 import { toTextExpression, renderTextExpression } from "./text_expression.js";
-import { updatePolicy } from "./update_policy.js";
+import { defaultUpdatePolicy } from "./update_policy.js";
 
 const parser = new DOMParser();
 
 export class Template {
-    constructor(path) {
-        this.path = path;
+    constructor(html, {updatePolicy = defaultUpdatePolicy, bindRoot = true} = {}) {
+        this.html = html;
+        this.bindings = Template.getBindings(this.html, {updatePolicy: this.updatePolicy, bindRoot: bindRoot})
+        this.updatePolicy = updatePolicy;
     }
 
-    async init() {
-        const response = await fetch(this.path);
+    render(data) {
+        const html = this.html.cloneNode(true);
+        Template.applyBindings(html, this.bindings, data, {updatePolicy: this.updatePolicy})
+        return html;
+    }
+
+    static async fromFile(path) {
+        const response = await fetch(path);
         const text = await response.text();
 
         this.html = parser.parseFromString(text, "text/html").body.firstElementChild;
-        this.bindings = Template.getBindings(this.html);
+        return new Template(this.html);
     }
 
-    static getBindings(html, doFirst=true) {
+    static getBindings(html, {bindRoot = true, updatePolicy = defaultUpdatePolicy} = {}) {
         const result = [];
         walkDom(html, (el, path) => {
+            let skipChildren = false;
             if(el.nodeType == Node.TEXT_NODE) {
                 const textExpression = toTextExpression(el.textContent);
                 if(textExpression.length > 1) {
@@ -35,7 +44,7 @@ export class Template {
                         result.push(new EventBinding([...path], {
                             name: attr.name.substring(1),
                             expression: attr.value
-                        }));
+                        }, updatePolicy));
                     }
                     else if(attr.name[0] === "*") {
                         attrName = attr.name.substring(1);
@@ -43,52 +52,33 @@ export class Template {
                         else if(attrName === 'of') ofValue = attr.value;
                         
                     }
+                    else if(attr.name[0] === "?") {
+                        result.push(new ConditionBinding([...path], attr.value, el, updatePolicy));
+                        skipChildren = true;
+                    }
                 }
 
                 if(forValue !== null && ofValue !== null) {
                     result.push(new LoopBinding([...path], {
                         forValue: forValue,
                         ofValue: ofValue
-                    }, Template.getBindings(el, false)))
-                    return true;
+                    }, el, updatePolicy));
+                    skipChildren = true;
                 }
             }
-        }, {htmlOnly: false, doFirst})
+            return skipChildren;
+        }, {htmlOnly: false, doFirst: bindRoot})
         return result;
     }
 
-    static applyBindings(html, bindings, data) {
-        for(const binding of bindings) {
-            const element = getDomNode(html, binding.path, {htmlOnly: false});
-            binding.applyToElement(element, data);
+    static applyBindings(html, bindings, data, {updatePolicy = defaultUpdatePolicy} = {}) {
+        let elements = bindings.map(binding => getDomNode(html, binding.path, {htmlOnly: false}));
+        for(let i = 0; i < bindings.length; i++) {
+            let element = elements[i];
+            const binding = bindings[i];
+            element = binding.render(element, data);
+            updatePolicy.onBindingRender(binding, data, element);
         }
-    }
-
-    static getUpdateMap(html, bindings) {
-        const map = new Map();
-        for(const reference of bindings) {
-            const all = reference.getAllReferences();
-            if(!all) continue;
-
-            var node = getDomNode(html, reference.path, {htmlOnly: false});
-            for(var ref of all){
-                let list = map.get(ref);
-                if(!list) {
-                    list = [];
-                    map.set(ref, list);
-                }
-
-                list.push({node, reference});
-            }
-        }
-
-        return map;
-    }
-
-    render(data) {
-        const html = this.html.cloneNode(true);
-        Template.applyBindings(html, this.bindings, data)
-        return html;
     }
 }
 
@@ -98,8 +88,13 @@ class TextBinding {
         this.textExpression = textExpression;
     }
 
-    applyToElement(element, data){
+    render(element, data){
         element.textContent = renderTextExpression(this.textExpression, data);
+        return element;
+    }
+
+    update(element, data) {
+        return this.render(element, data);
     }
 
     getAllReferences() {
@@ -108,13 +103,20 @@ class TextBinding {
 }
 
 class EventBinding {
-    constructor(path, event) {
+    constructor(path, event, updatePolicy) {
         this.path = path;
         this.event = event;
+        this.updatePolicy = updatePolicy;
     }
 
-    applyToElement(element, data){
-        element.addEventListener(this.event.name, (ev) => updatePolicy.callEvent(data, this.event.expression, ev));
+    render(element, data){
+        element.addEventListener(this.event.name, (ev) => this.updatePolicy.callEvent(data, this.event.expression, ev));
+        return element;
+    }
+
+    update(element, data) {
+        //TODO
+        return element;
     }
 
     getAllReferences() {
@@ -123,25 +125,82 @@ class EventBinding {
 }
 
 class LoopBinding {
-    constructor(path, condition, bindings) {
+    constructor(path, condition, element, updatePolicy) {
         this.path = path;
         this.condition = condition;
-        this.bindings = bindings;
+        
+        //Prevents editing source html
+        const cloned = element.cloneNode(true);
+        cloned.removeAttribute("*for");
+        cloned.removeAttribute("*of");
+        this.template = new Template(cloned, {updatePolicy, bindRoot: false})
     }
 
-    applyToElement(element, data) { //TODO divide into init & reapply
+    render(element, data) {
         const iterable = data[this.condition.ofValue];
         let dataCopy = {...data};
         for(const el of iterable) {
-            let newElement = element.cloneNode(true);
             dataCopy[this.condition.forValue] = el; //TODO probably a bad idea if data already has a property with that name
-            Template.applyBindings(newElement, this.bindings, dataCopy);
+            let newElement = this.template.render(dataCopy);
             element.insertAdjacentElement("afterend", newElement);
         }
-        element.remove();
+        const comment = document.createComment(`for ${this.condition.forValue} of ${this.condition.ofValue}`)
+        element.replaceWith(comment)
+        return comment;
+    }
+
+    update(element, data) {
+        //TODO
+        return element;
     }
 
     getAllReferences() {
         return [];
+    }
+}
+
+class ConditionBinding {
+    constructor(path, conditionName, element, updatePolicy) {
+        this.path = path;
+        this.conditionName = conditionName;
+
+        //Prevents editing source html
+        const cloned = element.cloneNode(true);
+        cloned.removeAttribute("?if");
+        this.template = new Template(cloned, {updatePolicy, bindRoot: false})
+    }
+
+    render(element, data) {
+        if(!data[this.conditionName]) {
+            return this.remove(element);
+        }
+
+        return element;
+    }
+
+    update(element, data) {
+        if(element.nodeType == Node.COMMENT_NODE) {
+            return this.add(element, data);
+        } else if(!data[this.conditionName]) {
+            return this.remove(element);
+        }
+
+        return element;
+    }
+
+    add(element, data) {
+        const comp = this.template.render(data);
+        element.replaceWith(comp);
+        return comp;
+    }
+
+    remove(element) {
+        const comment = document.createComment(`if ${this.conditionName}`)
+        element.replaceWith(comment)
+        return comment;
+    }
+
+    getAllReferences() {
+        return [this.conditionName];
     }
 }
