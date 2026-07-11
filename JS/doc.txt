@@ -1,0 +1,4 @@
+<div @click="func"/> => events
+<p> Hi {{value}} => data binding
+<div *for="user" *of="users">...</div> => for loop
+<div ?if="condition"> => if condition

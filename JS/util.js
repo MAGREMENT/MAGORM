@@ -1,7 +1,9 @@
-export function walkDom(html, action, {htmlOnly = true} = {}) {
+export function walkDom(html, action, {htmlOnly = true, doFirst = true} = {}) {
     const childType = htmlOnly ? "children" : "childNodes"; 
 
-    action(html, []);
+    if(doFirst) {
+        if(action(html, [])) return;
+    };
 
     const done = [0];
     let index = 0;
@@ -10,10 +12,13 @@ export function walkDom(html, action, {htmlOnly = true} = {}) {
     while(true) {
         if(done[index] < current[childType].length) {
             current = current[childType][done[index]]
-            action(current, done);
-
-            done.push(0);
-            index++;
+            if(action(current, done)) {
+                current = current.parentElement;
+                done[index]++;
+            } else {
+                done.push(0);
+                index++;
+            }
         }
         else {
             done.pop();

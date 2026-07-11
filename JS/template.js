@@ -1,9 +1,8 @@
 import { walkDom, getDomNode } from "./util.js";
 import { toTextExpression, renderTextExpression } from "./text_expression.js";
-import { FullRenderUpdatePolicy } from "./update_policy.js";
+import { updatePolicy } from "./update_policy.js";
 
 const parser = new DOMParser();
-export const updatePolicy = new FullRenderUpdatePolicy();
 
 export class Template {
     constructor(path) {
@@ -15,42 +14,59 @@ export class Template {
         const text = await response.text();
 
         this.html = parser.parseFromString(text, "text/html").body.firstElementChild;
-        this.references = Template.getReferences(this.html);
+        this.bindings = Template.getBindings(this.html);
     }
 
-    static getReferences(html) {
+    static getBindings(html, doFirst=true) {
         const result = [];
         walkDom(html, (el, path) => {
             if(el.nodeType == Node.TEXT_NODE) {
                 const textExpression = toTextExpression(el.textContent);
                 if(textExpression.length > 1) {
-                    result.push(new TextReference([...path], textExpression));
+                    result.push(new TextBinding([...path], textExpression));
                 }
             }
             else if(el.nodeType == Node.ELEMENT_NODE) {
+                let forValue = null;
+                let ofValue = null;
                 for(const attr of el.attributes) {
+                    let attrName;
                     if(attr.name[0] === '@') {
-                        result.push(new EventReference([...path], {
+                        result.push(new EventBinding([...path], {
                             name: attr.name.substring(1),
                             expression: attr.value
                         }));
                     }
+                    else if(attr.name[0] === "*") {
+                        attrName = attr.name.substring(1);
+                        if(attrName === 'for') forValue = attr.value;
+                        else if(attrName === 'of') ofValue = attr.value;
+                        
+                    }
+                }
+
+                if(forValue !== null && ofValue !== null) {
+                    result.push(new LoopBinding([...path], {
+                        forValue: forValue,
+                        ofValue: ofValue
+                    }, Template.getBindings(el, false)))
+                    return true;
                 }
             }
-        }, {htmlOnly: false})
+        }, {htmlOnly: false, doFirst})
         return result;
     }
 
-    static applyReferences(html, references, data) {
-        for(const reference of references) {
-            const element = getDomNode(html, reference.path, {htmlOnly: false});
-            reference.applyToElement(element, data);
+    static applyBindings(html, bindings, data) {
+        for(const binding of bindings) {
+            const element = getDomNode(html, binding.path, {htmlOnly: false});
+            binding.applyToElement(element, data);
         }
     }
 
-    static getUpdateMap(html, references) {
+    static getUpdateMap(html, bindings) {
         const map = new Map();
-        for(const reference of references) {
+        for(const reference of bindings) {
             const all = reference.getAllReferences();
             if(!all) continue;
 
@@ -62,7 +78,7 @@ export class Template {
                     map.set(ref, list);
                 }
 
-                list.push(node);
+                list.push({node, reference});
             }
         }
 
@@ -71,12 +87,12 @@ export class Template {
 
     render(data) {
         const html = this.html.cloneNode(true);
-        Template.applyReferences(html, this.references, data)
+        Template.applyBindings(html, this.bindings, data)
         return html;
     }
 }
 
-class TextReference {
+class TextBinding {
     constructor(path, textExpression) {
         this.path = path;
         this.textExpression = textExpression;
@@ -87,18 +103,42 @@ class TextReference {
     }
 
     getAllReferences() {
-        return this.textExpression.filter(te => te.name).map(te => te.name);
+        return this.textExpression.filter(te => te.nameChain).map(te => te.nameChain.join("."));
     }
 }
 
-class EventReference {
+class EventBinding {
     constructor(path, event) {
         this.path = path;
         this.event = event;
     }
 
     applyToElement(element, data){
-        element.addEventListener(this.event.name, () => updatePolicy.getAfterEventUpdate(data, this.event.expression));
+        element.addEventListener(this.event.name, (ev) => updatePolicy.callEvent(data, this.event.expression, ev));
+    }
+
+    getAllReferences() {
+        return [];
+    }
+}
+
+class LoopBinding {
+    constructor(path, condition, bindings) {
+        this.path = path;
+        this.condition = condition;
+        this.bindings = bindings;
+    }
+
+    applyToElement(element, data) { //TODO divide into init & reapply
+        const iterable = data[this.condition.ofValue];
+        let dataCopy = {...data};
+        for(const el of iterable) {
+            let newElement = element.cloneNode(true);
+            dataCopy[this.condition.forValue] = el; //TODO probably a bad idea if data already has a property with that name
+            Template.applyBindings(newElement, this.bindings, dataCopy);
+            element.insertAdjacentElement("afterend", newElement);
+        }
+        element.remove();
     }
 
     getAllReferences() {

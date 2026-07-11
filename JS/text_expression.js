@@ -39,10 +39,14 @@ class StringTextEpression {
 
 class DataTextExpression {
     constructor(name) {
-        this.name = name;
+        this.nameChain = name.split('.');
     }
 
     toText(data) {
-        return data[this.name];
+        let result = data;
+        for(const name of this.nameChain) {
+            result = result[name];
+        }
+        return result;
     }
 }

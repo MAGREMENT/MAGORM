@@ -6,4 +6,7 @@
     <button @click="increase">
         Increase
     </button>
-</div> 
+    <p *for="user" *of="users">
+        Hey {{user.name}}
+    </p>
+</div>

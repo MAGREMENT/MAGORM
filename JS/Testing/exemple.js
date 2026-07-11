@@ -1,8 +1,12 @@
 import { Component } from "../component.js";
-import { addComponent } from "../component_registry.js";
+import { addComponent } from "../main.js";
 
 class Exemple extends Component {
-    count = 5;
+    constructor({count = 5}) {
+        super();
+        this.count = count;
+        this.users = [{name: "hi"}, {name:"hello"}]
+    }
 
     increase() {
         this.count++;
