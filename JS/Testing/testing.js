@@ -6,6 +6,15 @@ export class ConsoleLogger {
     onSuiteEnd(name) {
 
     }
+
+    onRunStart(run, runNumber, totalRuns) {
+        if(run.runName) console.log("Starting run : " + run.runName);
+        else if(totalRuns > 1) console.log("Starting run #" + runNumber);
+    }
+
+    onRunEnd(run) {
+
+    }
     
     onTestStart(name) {
 
@@ -20,14 +29,19 @@ export class ConsoleLogger {
     }
 }
 
-export async function suite(name, tests, { setup = null, teardown = null, logger = new ConsoleLogger()} = {}) {
+export async function suite(name, tests, { setup = null, teardown = null, runs = [{}], logger = new ConsoleLogger()} = {}) {
     logger.onSuiteStart(name);
-    for(const test of tests) {
-        const context = setup ? await setup() : null;
-        logger.onTestStart(test.name);
-        const result = await test.action(context);
-        logger.onTestResult(test.name, result);
-        if(teardown) await teardown(context);
+    for(let i = 0; i < runs.length; i++) {
+        logger.onRunStart(runs[i], i + 1, runs.length);
+        for(const test of tests) {
+            let context = {...runs[i]};
+            context = setup ? await setup(context) : null;
+            logger.onTestStart(test.name);
+            const result = await test.action(context);
+            logger.onTestResult(test.name, result);
+            if(teardown) await teardown(context);
+        }
+        logger.onRunEnd(runs[i]);
     }
     logger.onSuiteEnd(name);
 }
@@ -51,3 +65,7 @@ class Assert {
 }
 
 export const assert = new Assert();
+
+export function fail(message) {
+    throw new Error(message);
+}

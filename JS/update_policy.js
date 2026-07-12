@@ -10,18 +10,18 @@ class UpdatePolicy {
     }
 
     async callEvent(component, funcName, ev) {
-        await component[funcName](ev);
+        return component[funcName](ev);
     }
 }
 
-class FullRenderOnEvent extends UpdatePolicy {
+export class FullRenderOnEvent extends UpdatePolicy {
     async callEvent(component, funcName, ev) {
-        super.callEvent(component, funcName, ev);
+        await super.callEvent(component, funcName, ev);
         component.render();
     }
 }
 
-class PartialRenderOnEvent extends UpdatePolicy {
+export class PartialRenderOnEvent extends UpdatePolicy {
     onTemplateAttached(component) {
         component.updateMap = new Map();
     }
@@ -41,9 +41,11 @@ class PartialRenderOnEvent extends UpdatePolicy {
         }
     }
 
-    async callEvent(component, funcName, ev) { //TODO can be optimized since we risk calling the same render multiple times
+    //TODO can be optimized since we risk calling the same render multiple times
+    //TODO Arrays & objects
+    async callEvent(component, funcName, ev) {
         const stateBefore = {...component}
-        super.callEvent(component, funcName, ev);
+        await super.callEvent(component, funcName, ev);
         for(const entry of component.updateMap.entries()) {
             if(stateBefore[entry[0]] !== component[entry[0]]) {
                 for(const update of entry[1]) {

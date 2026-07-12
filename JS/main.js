@@ -12,7 +12,7 @@ class ComponentElement extends HTMLElement {
     }
 }
 
-function createComponent(baseElement, info) {
+function createComponent(baseElement, info) { //TODO does not work if baseElement is the root element, make it work maybe ?
     let cstrParams = {};
     for(const attr of baseElement.attributes) {
         cstrParams[attr.name] = attr.value;
@@ -34,7 +34,7 @@ export function applyComponents(html) {
     }
 }
 
-export async function addComponent(component, html = null) { //TODO multi component does not seem to work, check & test
+export async function addComponent(component, html = null) {
     const info = {
         template: html ? new Template(stringToDom(html)) : await Template.fromFile(component.name.toLowerCase() + ".html"),
         component: component
@@ -42,5 +42,14 @@ export async function addComponent(component, html = null) { //TODO multi compon
 
     const tagName = 'app-' + component.name.toLowerCase();
     component_registry.set(tagName, info);
-    customElements.define(tagName, ComponentElement);
+
+    class Dummy extends ComponentElement {}
+
+    customElements.define(tagName, Dummy);
+}
+
+export function setUpdatePolicy(policy) {
+    for(const info of component_registry.values()) {
+        info.template.setUpdatePolicy(policy);
+    }
 }

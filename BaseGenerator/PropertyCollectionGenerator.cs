@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace BaseGenerator;
 
-public static class PropertyCollectionGenerator //TODO adapt / delete with nex extensibility
+public static class PropertyCollectionGenerator //TODO adapt / delete with new extensibility
 {
     public static void Initialize(IncrementalGeneratorInitializationContext context)
     {

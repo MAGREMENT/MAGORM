@@ -2,13 +2,14 @@ import { Component } from "../component.js";
 import { suite, test, assert } from "./testing.js";
 import { addComponent, applyComponents } from "../main.js";
 import { stringToDom } from "../util.js";
-import { generateSetupDom } from "./testing_util.js";
+import { generateSetupDom, runSteps } from "./testing_util.js";
+import { FullRenderOnEvent, PartialRenderOnEvent } from "../update_policy.js";
 
 class EmptyComponent extends Component {}
 const emptyHtml = "<p>Beautiful</p>";
 await addComponent(EmptyComponent, emptyHtml);
 
-suite("Basic Tests", [
+await suite("Basic Tests", [
     test("component replace", async () => {
         const html = "<div><p>Hello</p><app-emptycomponent></app-emptycomponent><p>World</p></div>";
         let dom = stringToDom(html);
@@ -39,7 +40,7 @@ class ExempleComponent extends Component {
 const exempleHtml = `
 <div>
     This is a test
-    <p>
+    <p id="number">
         Number: {{count}}
     </p>
     <!--This is a comment-->
@@ -49,16 +50,64 @@ const exempleHtml = `
     <p *for="user" *of="users">
         Hey {{user.name}}
     </p>
-    <p ?if="show">
+    <p ?if="show" id="conditional">
         This is conditional
     </p>
-    <button @click="toggleShow">Show</button>
+    <button id="showToggle" @click="toggleShow">Show</button>
 </div>`
 
 await addComponent(ExempleComponent, exempleHtml);
 
-suite("Basic Flows", [
-    test("number increase", (context) => {
-        debugger;
+const testHtml1 = `
+<div>
+    <app-exemplecomponent count="10"/>
+</div>
+`
+
+await suite("Basic Flows", [
+    test("event update binded data", (context) => {
+        return runSteps(context.dom, [
+            {
+                find: "#number",
+                content: "Number: 10",
+                trim: true,
+            }, 
+            {
+                find: "button",
+                click: true,
+            },
+            {
+                find: "#number",
+                content: "Number: 11",
+                trim: true,
+            }
+        ])
+    }),
+    test("event update conditional element", (context) => {
+        return runSteps(context.dom, [
+            {
+                dontFind: "#conditional"
+            }, 
+            {
+                find: "#showToggle",
+                click: true,
+            }, 
+            {
+                find: "#conditional"
+            }, 
+            {
+                find: "#showToggle",
+                click: true,
+            },
+            {
+                dontFind: "#conditional"
+            }
+        ])
     })
-], {setup: generateSetupDom(ExempleComponent, exempleHtml)})
+], {
+    setup: generateSetupDom(testHtml1),
+    runs: [
+        { runName: "FullRenderOnEvent policy", updatePolicy: new FullRenderOnEvent()},
+        { runName: "PartialRenderOnEvent render", updatePolicy: new PartialRenderOnEvent()}
+    ]
+})

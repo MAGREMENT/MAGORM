@@ -15,6 +15,14 @@ export class Template {
         return html;
     }
 
+    setUpdatePolicy(policy) {
+        this.updatePolicy = policy;
+        for(const binding of this.bindings) { //TODO probably bad design, would be better if bindings referenced the policy of the template
+            if(binding.updatePolicy) binding.updatePolicy = policy;
+            if(binding.template) binding.template.setUpdatePolicy(policy);
+        }
+    }
+
     static async fromFile(path) {
         const response = await fetch(path);
         const text = await response.text();
