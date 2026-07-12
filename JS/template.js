@@ -1,8 +1,6 @@
-import { walkDom, getDomNode } from "./util.js";
+import { walkDom, getDomNode, stringToDom } from "./util.js";
 import { toTextExpression, renderTextExpression } from "./text_expression.js";
 import { defaultUpdatePolicy } from "./update_policy.js";
-
-const parser = new DOMParser();
 
 export class Template {
     constructor(html, {updatePolicy = defaultUpdatePolicy, bindRoot = true} = {}) {
@@ -21,7 +19,7 @@ export class Template {
         const response = await fetch(path);
         const text = await response.text();
 
-        this.html = parser.parseFromString(text, "text/html").body.firstElementChild;
+        this.html = stringToDom(text);
         return new Template(this.html);
     }
 

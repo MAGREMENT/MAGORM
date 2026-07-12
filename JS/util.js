@@ -41,3 +41,9 @@ export function getDomNode(html, path, {htmlOnly = true} = {}) {
 
     return current;
 }
+
+const parser = new DOMParser();
+
+export function stringToDom(str) {
+    return parser.parseFromString(str, "text/html").body.firstElementChild;
+}
