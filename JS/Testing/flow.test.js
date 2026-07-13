@@ -1,5 +1,5 @@
 import { Component } from "../component.js";
-import { suite, test, assert } from "./testing.js";
+import { suite, test, assert, fail } from "./testing.js";
 import { addComponent, applyComponents } from "../main.js";
 import { stringToDom } from "../util.js";
 import { generateSetupDom, runSteps } from "./testing_util.js";
@@ -75,6 +75,7 @@ const testHtml1 = `
 </div>
 `
 
+//TODO to testSteps()
 await suite("Basic Flows", [
     test("event update binded text", (context) => {
         return runSteps(context.dom, [
@@ -94,8 +95,8 @@ await suite("Basic Flows", [
             }
         ])
     }),
-    test("event update conditional element", (context) => { //TODO to testSteps()
-        return runSteps(context.dom, [
+    test("event update conditional element", async (context) => {
+        await runSteps(context.dom, [
             {
                 dontFind: "#conditional"
             }, 
@@ -105,8 +106,15 @@ await suite("Basic Flows", [
             }, 
             {
                 find: "#conditional"
-            }, 
-            {
+            }
+        ])
+
+        const element = context.dom.querySelector("#conditional");
+        for(const attr of element.attributes) {
+            if(attr.name === "?if") fail("Conditional element should not have *if")
+        }
+
+        return runSteps(context.dom, [{
                 find: "#showToggle",
                 click: true,
             },

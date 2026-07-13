@@ -3,21 +3,31 @@ import { toTextExpression, renderTextExpression } from "./text_expression.js";
 import { defaultUpdatePolicy } from "./update_policy.js";
 
 export class Template {
-    constructor(html, {updatePolicy = defaultUpdatePolicy, bindRoot = true} = {}) {
+    constructor(html, {
+        updatePolicy = defaultUpdatePolicy, 
+        bindRoot = true,
+        rootAttributesToRemove = [],
+    } = {}) {
         this.html = html;
         this.bindings = Template.getBindings(this.html, {updatePolicy: this.updatePolicy, bindRoot: bindRoot})
         this.updatePolicy = updatePolicy;
+        this.rootAttributesToRemove = rootAttributesToRemove;
     }
 
     render(data, context = {}) {
         const html = this.html.cloneNode(true);
+        for(const attrName of this.rootAttributesToRemove) {
+            html.removeAttribute(attrName);
+        }
+
         Template.applyBindings(html, this.bindings, data, context, {updatePolicy: this.updatePolicy})
         return html;
     }
 
+    //TODO probably bad design, would be better if bindings referenced the policy of the template => use updatePolicyProxy instead
     setUpdatePolicy(policy) {
         this.updatePolicy = policy;
-        for(const binding of this.bindings) { //TODO probably bad design, would be better if bindings referenced the policy of the template
+        for(const binding of this.bindings) {
             if(binding.updatePolicy) binding.updatePolicy = policy;
             if(binding.template) binding.template.setUpdatePolicy(policy);
         }
@@ -137,12 +147,7 @@ class LoopBinding {
     constructor(path, condition, element, updatePolicy) {
         this.path = path;
         this.condition = condition;
-        
-        //Prevents editing source html
-        const cloned = element.cloneNode(true);
-        cloned.removeAttribute("*for");
-        cloned.removeAttribute("*of");
-        this.template = new Template(cloned, {updatePolicy, bindRoot: false})
+        this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["*for", "*of"]})
     }
 
     render(element, data, context) {
@@ -174,11 +179,7 @@ class ConditionBinding {
     constructor(path, conditionName, element, updatePolicy) {
         this.path = path;
         this.conditionName = conditionName;
-
-        //Prevents editing source html
-        const cloned = element.cloneNode(true);
-        cloned.removeAttribute("?if");
-        this.template = new Template(cloned, {updatePolicy, bindRoot: false}) //TODO child template class instead ?
+        this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["?if"]})
     }
 
     render(element, data, context) {
@@ -186,6 +187,7 @@ class ConditionBinding {
             return this.remove(element);
         }
 
+        element.removeAttribute("?if")
         return element;
     }
 
