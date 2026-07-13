@@ -1,4 +1,6 @@
-export function toTextExpression(text) {
+import { toExpression } from "./expression.js";
+
+export function toTextExpression(text) { //TODO probably remove text_expression
     let startIndex = 0;
     const result = [];
 
@@ -23,8 +25,8 @@ export function toTextExpression(text) {
     return result;
 }
 
-export function renderTextExpression(textExpression, data) {
-    return textExpression.map(te => te.toText(data)).join("");
+export function renderTextExpression(textExpression, data, context) {
+    return textExpression.map(te => te.toText(data, context)).join("");
 }
 
 class StringTextEpression {
@@ -32,21 +34,18 @@ class StringTextEpression {
         this.str = str;
     }
 
-    toText(data) {
+    toText(data, context) {
         return this.str;
     }
 }
 
 class DataTextExpression {
     constructor(name) {
-        this.nameChain = name.split('.');
+        this.name = name;
+        this.expression = toExpression(name);
     }
 
-    toText(data) {
-        let result = data;
-        for(const name of this.nameChain) {
-            result = result[name];
-        }
-        return result;
+    toText(data, context) {
+        return this.expression.resolve(data, context);
     }
 }

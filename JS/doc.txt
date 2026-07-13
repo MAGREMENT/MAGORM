@@ -1,4 +1,5 @@
 <div @click="func"/> => events
-<p> Hi {{value}} => data binding
+<p> Hi {{value}} => text binding
 <div *for="user" *of="users">...</div> => for loop
 <div ?if="condition"> => if condition
+<a :href="url"/> => attribute binding

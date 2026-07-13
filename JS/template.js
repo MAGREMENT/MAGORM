@@ -9,9 +9,9 @@ export class Template {
         this.updatePolicy = updatePolicy;
     }
 
-    render(data) {
+    render(data, context = {}) {
         const html = this.html.cloneNode(true);
-        Template.applyBindings(html, this.bindings, data, {updatePolicy: this.updatePolicy})
+        Template.applyBindings(html, this.bindings, data, context, {updatePolicy: this.updatePolicy})
         return html;
     }
 
@@ -62,6 +62,9 @@ export class Template {
                         result.push(new ConditionBinding([...path], attr.value, el, updatePolicy));
                         skipChildren = true;
                     }
+                    else if(attr.name[0] === ':') {
+                        result.push(new AttributeBinding([...path], attr.name.substring(1), attr.value));
+                    }
                 }
 
                 if(forValue !== null && ofValue !== null) {
@@ -77,34 +80,34 @@ export class Template {
         return result;
     }
 
-    static applyBindings(html, bindings, data, {updatePolicy = defaultUpdatePolicy} = {}) {
+    static applyBindings(html, bindings, data, context, {updatePolicy = defaultUpdatePolicy} = {}) {
         let elements = bindings.map(binding => getDomNode(html, binding.path, {htmlOnly: false}));
         for(let i = 0; i < bindings.length; i++) {
             let element = elements[i];
             const binding = bindings[i];
-            element = binding.render(element, data);
+            element = binding.render(element, data, context);
             updatePolicy.onBindingRender(binding, data, element);
         }
     }
 }
 
-class TextBinding {
+class TextBinding { //TODO optimize, divide into multiple text nodes
     constructor(path, textExpression) {
         this.path = path;
         this.textExpression = textExpression;
     }
 
-    render(element, data){
-        element.textContent = renderTextExpression(this.textExpression, data);
+    render(element, data, context) {
+        element.textContent = renderTextExpression(this.textExpression, data, context);
         return element;
     }
 
-    update(element, data) {
-        return this.render(element, data);
+    update(element, data, context) {
+        return this.render(element, data, context);
     }
 
     getAllReferences() {
-        return this.textExpression.filter(te => te.nameChain).map(te => te.nameChain.join("."));
+        return this.textExpression.filter(te => te.name).map(te => te.name);
     }
 }
 
@@ -115,12 +118,12 @@ class EventBinding {
         this.updatePolicy = updatePolicy;
     }
 
-    render(element, data){
+    render(element, data, context) {
         element.addEventListener(this.event.name, (ev) => this.updatePolicy.callEvent(data, this.event.expression, ev));
         return element;
     }
 
-    update(element, data) {
+    update(element, data, context) {
         //TODO
         return element;
     }
@@ -142,20 +145,22 @@ class LoopBinding {
         this.template = new Template(cloned, {updatePolicy, bindRoot: false})
     }
 
-    render(element, data) {
+    render(element, data, context) {
         const iterable = data[this.condition.ofValue];
-        let dataCopy = {...data};
+        let ctxCopy = {...context}
+        let curr = element;
         for(const el of iterable) {
-            dataCopy[this.condition.forValue] = el; //TODO probably a bad idea if data already has a property with that name
-            let newElement = this.template.render(dataCopy);
-            element.insertAdjacentElement("afterend", newElement);
+            ctxCopy[this.condition.forValue] = el;
+            let newElement = this.template.render(data, ctxCopy);
+            curr.insertAdjacentElement("afterend", newElement);
+            curr = newElement;
         }
         const comment = document.createComment(`for ${this.condition.forValue} of ${this.condition.ofValue}`)
         element.replaceWith(comment)
         return comment;
     }
 
-    update(element, data) {
+    update(element, data, context) {
         //TODO
         return element;
     }
@@ -173,10 +178,10 @@ class ConditionBinding {
         //Prevents editing source html
         const cloned = element.cloneNode(true);
         cloned.removeAttribute("?if");
-        this.template = new Template(cloned, {updatePolicy, bindRoot: false})
+        this.template = new Template(cloned, {updatePolicy, bindRoot: false}) //TODO child template class instead ?
     }
 
-    render(element, data) {
+    render(element, data, context) {
         if(!data[this.conditionName]) {
             return this.remove(element);
         }
@@ -184,7 +189,7 @@ class ConditionBinding {
         return element;
     }
 
-    update(element, data) {
+    update(element, data, context) {
         if(element.nodeType == Node.COMMENT_NODE) {
             return this.add(element, data);
         } else if(!data[this.conditionName]) {
@@ -194,7 +199,7 @@ class ConditionBinding {
         return element;
     }
 
-    add(element, data) {
+    add(element, data, context) {
         const comp = this.template.render(data);
         element.replaceWith(comp);
         return comp;
@@ -208,5 +213,26 @@ class ConditionBinding {
 
     getAllReferences() {
         return [this.conditionName];
+    }
+}
+
+class AttributeBinding {
+    constructor(path, attrName, valueName) {
+        this.path = path;
+        this.attrName = attrName;
+        this.valueName = valueName;
+    }
+
+    render(element, data, context) {
+        element[this.attrName] = data[this.valueName];
+        return element;
+    }
+
+    update(element, data, context) {
+        return this.render(element, data, context);
+    }
+
+    getAllReferences() {
+        return [this.valueName];
     }
 }

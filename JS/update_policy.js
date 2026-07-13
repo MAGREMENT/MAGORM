@@ -58,4 +58,4 @@ export class PartialRenderOnEvent extends UpdatePolicy {
 
 export const defaultUpdatePolicy = new PartialRenderOnEvent();
 
-//TODO Other policies
+//TODO Other policies(React like setValue, Proxy, Object.define properties, ...)

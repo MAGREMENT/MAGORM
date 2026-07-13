@@ -32,5 +32,9 @@ export async function runSteps(html, steps) {
             }
             assert.equal(toCheck, expected);
         }
+
+        if(step.attribute) {
+            assert.equal(element[step.attribute.name], step.attribute.content)
+        }
     }
 }

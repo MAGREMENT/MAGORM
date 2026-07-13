@@ -24,7 +24,8 @@ class ExempleComponent extends Component {
     constructor({count = 5}) {
         super();
         this.count = count;
-        this.users = [{name: "hi"}, {name:"hello"}]
+        this.users = [{name: "Jeanne"}, {name:"Bernard"}]
+        this.currentUserIdx = 0;
         this.show = false;
     }
 
@@ -34,6 +35,14 @@ class ExempleComponent extends Component {
 
     toggleShow() {
         this.show = !this.show;
+    }
+
+    nextUser() {
+        this.currentUserIdx = (this.currentUserIdx + 1) % this.users.length;
+    }
+
+    get currentUser() {
+        return this.users[this.currentUserIdx].name;
     }
 }
 
@@ -47,13 +56,15 @@ const exempleHtml = `
     <button @click="increase">
         Increase
     </button>
-    <p *for="user" *of="users">
+    <p class="someClass" *for="user" *of="users">
         Hey {{user.name}}
     </p>
     <p ?if="show" id="conditional">
         This is conditional
     </p>
-    <button id="showToggle" @click="toggleShow">Show</button>
+    <button id="showToggle" @click="toggleShow">Show</button>       
+    <input :value="currentUser">Current User</a>
+    <button id="userChange" @click="nextUser">Change user</button>                       
 </div>`
 
 await addComponent(ExempleComponent, exempleHtml);
@@ -65,7 +76,7 @@ const testHtml1 = `
 `
 
 await suite("Basic Flows", [
-    test("event update binded data", (context) => {
+    test("event update binded text", (context) => {
         return runSteps(context.dom, [
             {
                 find: "#number",
@@ -83,7 +94,7 @@ await suite("Basic Flows", [
             }
         ])
     }),
-    test("event update conditional element", (context) => {
+    test("event update conditional element", (context) => { //TODO to testSteps()
         return runSteps(context.dom, [
             {
                 dontFind: "#conditional"
@@ -103,6 +114,28 @@ await suite("Basic Flows", [
                 dontFind: "#conditional"
             }
         ])
+    }),
+    test("event update binded attribute", (context) => {
+        return runSteps(context.dom, [
+            {
+                find: "input",
+                attribute: {name: "value", content: "Jeanne"}
+            }, 
+            {
+                find: "#userChange",
+                click: true
+            },
+            {
+                find: "input",
+                attribute: {name: "value", content: "Bernard"}
+            },
+        ])
+    }),
+    test("for loop first render", (context) => { //TODO maybe to runSteps with find that returns multiple and if so, multiple content check ?
+        const list = context.dom.querySelectorAll(".someClass")
+        assert.equal(list.length, 2);
+        assert.equal(list[0].textContent.trim(), "Hey Jeanne")
+        assert.equal(list[1].textContent.trim(), "Hey Bernard")
     })
 ], {
     setup: generateSetupDom(testHtml1),
