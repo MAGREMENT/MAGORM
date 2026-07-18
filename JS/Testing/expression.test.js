@@ -4,7 +4,7 @@ import { assert, suite, test } from "./testing.js";
 function testExpression(name, str, expected) {
     return test(name, (context) => {
         const expr = toExpression(str);
-        assert.equal(expr.resolve(context.data, context.context), expected)
+        assert.equal(expr.evaluate(context.data, context.context), expected)
     })
 }
 
@@ -34,7 +34,8 @@ await suite("Expression Test", [
     testExpression("this", "this.valueInConflict", 2),
     testExpression("not", "!condition", true),
     testExpression("not with space", "! condition", true),
-    testExpression("double not", "!!condition", false)
+    testExpression("double not", "!!condition", false),
+    testExpression("?.", "inexistantValue?.member", null)
 ], {
     setup: () => expressionData
 })

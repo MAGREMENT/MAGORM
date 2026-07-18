@@ -1,15 +1,13 @@
 class MemberExpression {
     constructor(name) {
-        this.nameChain = name.split('.');
+        const { segments, subExpressions } = divideIntoSegments(name);
+        this.segments = segments;
+        this.subExpressions = subExpressions;
     }
 
-    resolve(data, context) {
-        if(this.nameChain.length === 0) return null;
-
-        if(this.nameChain[0] === "this") return resolveNameChain(data, this.nameChain, 1);
-        
-        let result = resolveNameChain(context, this.nameChain);
-        return result === undefined ? resolveNameChain(data, this.nameChain) : result;
+    evaluate(data, context) {
+        const resolvedExpressions = this.subExpressions.map(ex => ex.evaluate(data, context));
+        return resolveSegments(data, context, this.segments, resolvedExpressions);
     }
 
     assignChild(child) {
@@ -17,19 +15,85 @@ class MemberExpression {
     }
 
     toString() {
-        return this.nameChain.join("");
+        return this.segments.join("");
+    }
+
+    getReferences() {
+        return this.segments.filter(s => typeof s === "string"); //TODO expressions also
     }
 }
 
-function resolveNameChain(data, nameChain, from = 0, to = nameChain?.length ?? 0) {
-    if(data === undefined) return data;
-
-    let result = data;
-    for(; from < to; from++) {
-        result = result[nameChain[from]]
-        if(result === undefined) return result;
+function divideIntoSegments(str) {
+    const result = {
+        segments: [],
+        subExpressions: [],
     }
+    let startIndex = 0;
+    while(startIndex < str.length) {
+        let nullCheck = false;
+        let stop = false;
+        let endIndex;
+        for(endIndex = startIndex; endIndex < str.length; endIndex++) {
+            switch(str[endIndex]) {
+                case "?":
+                    if(endIndex >= str.length - 1 || (str[endIndex + 1] !== '.' && str[endIndex + 1] !== '['))
+                        throw new Error("? must be followed by either . or [ in a member expression")
+                        nullCheck = true;
+                    break;
+                case ".":
+                    stop = true;
+                    break;
+            }
+
+            if(stop) break;
+        }
+
+        if(endIndex > startIndex) result.segments.push(str.substring(startIndex, endIndex));
+        if(nullCheck) result.segments.push(null);
+        startIndex = endIndex + 1;
+    }
+
     return result;
+}
+
+function resolveSegments(data, context, segments, resolvedExpressions) {
+    let curr = context;
+    if(segments.length === 0) return curr;
+
+    let start = 0;
+    if(segments[start] === "this") {
+        curr = data;
+        start++;
+    }
+
+   
+    for(; start < segments.length; start++) {
+        const segment = segments[start];
+        if(segment === null) {
+            if(curr === null || curr === undefined) return null;
+            continue
+        }
+
+        if(curr === undefined) {
+            debugger;
+            throw new Error(); //TODO significant error
+        }
+
+        if(segment.functionName) {
+            if(start === 0) {
+                if(curr[segment.functionName] === undefined) curr = data;
+                curr = curr[segment.functionName]();
+            }
+            
+        }
+        else {
+            const access =  Number.isInteger(segment) ? resolvedExpressions[segment] : segment;
+            curr = curr[access];
+            if(start === 0 && curr === undefined) curr = data[access] 
+        }
+    }
+
+    return curr;
 }
 
 class OperatorExpression {
@@ -49,6 +113,10 @@ class OperatorExpression {
 
         return false;
     }
+
+    getReferences() {
+        return this.left.getReferences() + this.right.getReferences();
+    }
 }
 
 class AdjectiveExpression {
@@ -59,11 +127,15 @@ class AdjectiveExpression {
     toString() {
         return "!";
     }
+
+    getReferences() {
+        return this.child.getReferences();
+    }
 }
 
 class NotExpression extends AdjectiveExpression {
-    resolve(data, context) {
-        return !this.child.resolve(data, context);
+    evaluate(data, context) {
+        return !this.child.evaluate(data, context);
     }
 
     assignChild(child) {
@@ -152,6 +224,7 @@ a
 a.b.c
 this.a => a can only come from data. If not context takes priority
 !a => both !a and ! a are valid
+a?.b
 */
 
 /* TODO
@@ -160,5 +233,4 @@ a (+, -, *, /) b
 a (&&, ||) b
 a ? b : c
 (a.)foo(bar)
-a?.b?.c
 */

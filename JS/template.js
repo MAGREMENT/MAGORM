@@ -1,6 +1,6 @@
 import { walkDom, getDomNode, stringToDom } from "./util.js";
-import { toTextExpression, renderTextExpression } from "./text_expression.js";
 import { defaultUpdatePolicy } from "./update_policy.js";
+import { toExpression } from "./expression.js";
 
 export class Template {
     constructor(html, {
@@ -14,13 +14,13 @@ export class Template {
         this.rootAttributesToRemove = rootAttributesToRemove;
     }
 
-    render(data, context = {}) {
+    render(component, context = {}) {
         const html = this.html.cloneNode(true);
         for(const attrName of this.rootAttributesToRemove) {
             html.removeAttribute(attrName);
         }
 
-        Template.applyBindings(html, this.bindings, data, context, {updatePolicy: this.updatePolicy})
+        Template.applyBindings(html, this.bindings, component, context, {updatePolicy: this.updatePolicy})
         return html;
     }
 
@@ -46,9 +46,9 @@ export class Template {
         walkDom(html, (el, path) => {
             let skipChildren = false;
             if(el.nodeType == Node.TEXT_NODE) {
-                const textExpression = toTextExpression(el.textContent);
-                if(textExpression.length > 1) {
-                    result.push(new TextBinding([...path], textExpression));
+                const divided = divideTextNode(el.textContent);
+                if(divided.length > 1 || divided[0].evaluate) {
+                    result.push(new TextBinding([...path], divided));
                 }
             }
             else if(el.nodeType == Node.ELEMENT_NODE) {
@@ -90,35 +90,66 @@ export class Template {
         return result;
     }
 
-    static applyBindings(html, bindings, data, context, {updatePolicy = defaultUpdatePolicy} = {}) {
+    static applyBindings(html, bindings, component, context, {updatePolicy = defaultUpdatePolicy} = {}) {
         let elements = bindings.map(binding => getDomNode(html, binding.path, {htmlOnly: false}));
         for(let i = 0; i < bindings.length; i++) {
             let element = elements[i];
             const binding = bindings[i];
-            element = binding.render(element, data, context);
-            updatePolicy.onBindingRender(binding, data, element);
+            element = binding.render(element, component, context);
         }
     }
 }
 
 class TextBinding { //TODO optimize, divide into multiple text nodes
-    constructor(path, textExpression) {
+    constructor(path, divided) {
         this.path = path;
-        this.textExpression = textExpression;
+        this.divided = divided;
     }
 
-    render(element, data, context) {
-        element.textContent = renderTextExpression(this.textExpression, data, context);
+    render(element, component, context) {
+        element.textContent = this.getTextValue(component, context);
+        for(const te of this.divided) {
+            if(te.getReferences) {
+                for(const ref of te.getReferences()) {
+                    component.addUpdater(ref, element, this);
+                }
+            }
+        }
+    }
+
+    update(element, component, context) {
+        element.textContent = this.getTextValue(component, context);
         return element;
     }
 
-    update(element, data, context) {
-        return this.render(element, data, context);
+    getTextValue(component, context) {
+        return this.divided.map(d => d.evaluate ? d.evaluate(component, context) : d).join("");
     }
+}
 
-    getAllReferences() {
-        return this.textExpression.filter(te => te.name).map(te => te.name);
-    }
+function divideTextNode(text) { //TODO probably remove text_expression
+    let startIndex = 0;
+    const result = [];
+
+    let nextIndex;
+    do {
+        nextIndex = text.indexOf("{{", startIndex);
+        let endIndex = nextIndex == -1 ? text.length : nextIndex;
+        result.push(text.substring(startIndex, endIndex));
+
+        if(nextIndex >= 0) {
+            nextIndex += 2;
+            endIndex = text.indexOf("}}", nextIndex + 1);
+            if(nextIndex == -1) throw new Error("String expression not closed");
+
+            result.push(toExpression(text.substring(nextIndex, endIndex)))
+            nextIndex = endIndex + 2;
+        }
+
+        startIndex = nextIndex + 1;
+    } while(nextIndex != -1);
+
+    return result;
 }
 
 class EventBinding {
@@ -128,18 +159,8 @@ class EventBinding {
         this.updatePolicy = updatePolicy;
     }
 
-    render(element, data, context) {
-        element.addEventListener(this.event.name, (ev) => this.updatePolicy.callEvent(data, this.event.expression, ev));
-        return element;
-    }
-
-    update(element, data, context) {
-        //TODO
-        return element;
-    }
-
-    getAllReferences() {
-        return [];
+    render(element, component, context) {
+        element.addEventListener(this.event.name, (ev) => this.updatePolicy.callEvent(component, this.event.expression, ev));
     }
 }
 
@@ -150,28 +171,18 @@ class LoopBinding {
         this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["*for", "*of"]})
     }
 
-    render(element, data, context) {
-        const iterable = data[this.condition.ofValue];
+    render(element, component, context) {
+        const iterable = component[this.condition.ofValue];
         let ctxCopy = {...context}
         let curr = element;
         for(const el of iterable) {
             ctxCopy[this.condition.forValue] = el;
-            let newElement = this.template.render(data, ctxCopy);
+            let newElement = this.template.render(component, ctxCopy);
             curr.insertAdjacentElement("afterend", newElement);
             curr = newElement;
         }
         const comment = document.createComment(`for ${this.condition.forValue} of ${this.condition.ofValue}`)
         element.replaceWith(comment)
-        return comment;
-    }
-
-    update(element, data, context) {
-        //TODO
-        return element;
-    }
-
-    getAllReferences() {
-        return [];
     }
 }
 
@@ -182,27 +193,26 @@ class ConditionBinding {
         this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["?if"]})
     }
 
-    render(element, data, context) {
-        if(!data[this.conditionName]) {
-            return this.remove(element);
-        }
+    render(element, component, context) {
+        if(!component[this.conditionName]) {
+            element = this.remove(element);
+        } else element.removeAttribute("?if")
 
-        element.removeAttribute("?if")
-        return element;
+        component.addUpdater(this.conditionName, element, this);
     }
 
-    update(element, data, context) {
+    update(element, component, context) {
         if(element.nodeType == Node.COMMENT_NODE) {
-            return this.add(element, data);
-        } else if(!data[this.conditionName]) {
+            return this.add(element, component);
+        } else if(!component[this.conditionName]) {
             return this.remove(element);
         }
 
         return element;
     }
 
-    add(element, data, context) {
-        const comp = this.template.render(data);
+    add(element, component, context) {
+        const comp = this.template.render(component);
         element.replaceWith(comp);
         return comp;
     }
@@ -211,10 +221,6 @@ class ConditionBinding {
         const comment = document.createComment(`if ${this.conditionName}`)
         element.replaceWith(comment)
         return comment;
-    }
-
-    getAllReferences() {
-        return [this.conditionName];
     }
 }
 
@@ -225,16 +231,13 @@ class AttributeBinding {
         this.valueName = valueName;
     }
 
-    render(element, data, context) {
-        element[this.attrName] = data[this.valueName];
+    render(element, component, context) {
+        element[this.attrName] = component[this.valueName];
+        component.addUpdater(this.valueName, element, this);
+    }
+
+    update(element, component, context) {
+        element[this.attrName] = component[this.valueName];
         return element;
-    }
-
-    update(element, data, context) {
-        return this.render(element, data, context);
-    }
-
-    getAllReferences() {
-        return [this.valueName];
     }
 }

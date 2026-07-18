@@ -17,4 +17,8 @@ export class Component {
     onRender() {
 
     }
+
+    addUpdater(property, element, updater) {
+        this.template.updatePolicy.addUpdater(this, property, element, updater);
+    }
 }
