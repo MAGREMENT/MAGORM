@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Base.Fields;
 
 namespace ORM.Queries.Results;
 
@@ -14,6 +15,8 @@ public class DbDataReaderQueryResult(DbDataReader _reader) : IQueryResult
         return TryGet(_reader.GetOrdinal(key), out value);
     }
 
+    public object? Get(string name) => KeyValue.DefaultGet<string, object?>(this, name);
+
     public bool TryGet(int key, out object? value)
     {
         if (key < 0 || key >= _reader.FieldCount)
@@ -25,6 +28,8 @@ public class DbDataReaderQueryResult(DbDataReader _reader) : IQueryResult
         value = _reader.IsDBNull(key) ? null : _reader.GetValue(key);
         return true;
     }
+
+    public object? Get(int name) => KeyValue.DefaultGet<int, object?>(this, name);
 
     public bool Next()
     {
@@ -65,6 +70,8 @@ public class MultiDbDataReaderQueryResult : IQueryResult
         return TryGet(_currReader.GetOrdinal(key), out value);
     }
 
+    public object? Get(string name) => KeyValue.DefaultGet<string, object?>(this, name);
+
     public bool TryGet(int key, out object? value)
     {
         if (key < 0 || key >= _currReader.FieldCount)
@@ -76,6 +83,8 @@ public class MultiDbDataReaderQueryResult : IQueryResult
         value = _currReader.IsDBNull(key) ? null : _currReader.GetValue(key);
         return true;
     }
+
+    public object? Get(int name) => KeyValue.DefaultGet<int, object?>(this, name);
 
     public bool Next()
     {

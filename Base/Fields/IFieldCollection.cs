@@ -1,12 +1,8 @@
 ﻿namespace Base.Fields;
 
-public interface IFieldCollection
+public interface IFieldCollection : IKeyValue<string, object?>
 {
     int GetFieldCount();
     
     IEnumerable<string> GetFieldsName();
-    
-    object? Get(string name);
-    
-    void Set(string name, object? value);
 }

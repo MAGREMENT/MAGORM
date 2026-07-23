@@ -7,7 +7,7 @@ public class Generator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        PropertyCollectionGenerator.Initialize(context);
+        PropertyFieldCollectionGenerator.Initialize(context);
         ExtensibleGenerator.Initialize(context);
     }
 }

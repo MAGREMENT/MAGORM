@@ -1,4 +1,5 @@
 ﻿using Base;
+using Base.Fields;
 using ORM.Queries.Specifications;
 
 namespace ORM.Abstract;

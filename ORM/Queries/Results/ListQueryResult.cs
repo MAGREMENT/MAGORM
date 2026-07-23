@@ -1,4 +1,4 @@
-﻿using ORM.Abstract;
+﻿using Base.Fields;
 
 namespace ORM.Queries.Results;
 
@@ -16,7 +16,7 @@ public class ListQueryResult : IBufferedQueryResult
 
     public void AddColumn(string name, object? value)
     {
-        _values[_curr].Add(name, value);
+        _values[_curr].Set(name, value);
     }
     
     public bool TryGet(string key, out object? value)
@@ -24,11 +24,21 @@ public class ListQueryResult : IBufferedQueryResult
         return _values[_curr].TryGet(key, out value);
     }
 
+    public object? Get(string name)
+    {
+        return _values[_curr].Get(name);
+    }
+
     public bool TryGet(int key, out object? value)
     {
         return _values[_curr].TryGet(key, out value);
     }
-    
+
+    public object? Get(int name)
+    {
+        return _values[_curr].Get(name);
+    }
+
     public bool Next()
     {
         _curr++;
@@ -58,7 +68,7 @@ public class DictionaryList<TKey, TValue> : IKeyValue<TKey, TValue>
     private readonly Dictionary<TKey, int> _dic = new();
     private readonly List<TValue> _list = new();
 
-    public void Add(TKey key, TValue value)
+    public void Set(TKey key, TValue value)
     {
         if (_dic.TryAdd(key, _list.Count)) _list.Add(value);
     }
@@ -75,6 +85,8 @@ public class DictionaryList<TKey, TValue> : IKeyValue<TKey, TValue>
         return true;
     }
 
+    public TValue Get(TKey name) => KeyValue.DefaultGet(this, name);
+
     public bool TryGet(int key, out TValue value)
     {
         if (key >= _list.Count)
@@ -85,5 +97,10 @@ public class DictionaryList<TKey, TValue> : IKeyValue<TKey, TValue>
 
         value = _list[key];
         return true;
+    }
+
+    public TValue Get(int name)
+    {
+        return !TryGet(name, out var val) ? throw new KeyNotFoundException() : val;
     }
 }

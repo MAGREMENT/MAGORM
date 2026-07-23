@@ -1,8 +1,8 @@
-﻿using ORM.Abstract;
+﻿using Base.Fields;
 
 namespace ORM.Queries;
 
-public interface IQueryResult : IKeyValue<string, object?>, IKeyValue<int, object?>, IDisposable
+public interface IQueryResult : IReadOnlyKeyValue<string, object?>, IReadOnlyKeyValue<int, object?>, IDisposable
 {
     public bool Next();
     public bool Reset();

@@ -1,5 +1,6 @@
 ﻿using Base;
 using Base.Dependency;
+using Base.Fields;
 using ORM.Queries;
 using ORM.Queries.Specifications;
 

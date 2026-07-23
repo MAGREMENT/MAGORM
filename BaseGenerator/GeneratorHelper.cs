@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
@@ -45,5 +46,26 @@ public static class GeneratorHelper
         if(additionalParameters is not null) additionalParameters(builder);
 
         builder.Append(") {\n");
+    }
+
+    public static List<IPropertySymbol> GetAllPropertiesWithAttribute(INamedTypeSymbol symbol, string attributeFullName)
+    {
+        List<IPropertySymbol> properties = new();
+        foreach (var prop in symbol.GetMembers().OfType<IPropertySymbol>())
+        {
+            var ok = false;
+            foreach (var attr in prop.GetAttributes())
+            {
+                if (IsOrInherits(attr.AttributeClass, attributeFullName))
+                {
+                    ok = true;
+                    break;
+                }
+            }
+
+            if(ok) properties.Add(prop);
+        }
+
+        return properties;
     }
 }

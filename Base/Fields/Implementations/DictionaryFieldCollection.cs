@@ -1,37 +1,40 @@
 ﻿namespace Base.Fields.Implementations;
 
-public class DictionaryFieldCollection : IFieldCollection
+public class DictionaryFieldCollection : Dictionary<string, object?>, IFieldCollection
 {
-    protected readonly Dictionary<string, object?> _dic = new();
-    
     public int GetFieldCount()
     {
-        return _dic.Count;
+        return Count;
     }
 
     public IEnumerable<string> GetFieldsName()
     {
-        return _dic.Keys;
+        return Keys;
     }
 
     public void Set(string name, object? value)
     {
-        _dic[name] = value;
+        this[name] = value;
+    }
+
+    public bool TryGet(string key, out object? value)
+    {
+        return TryGetValue(key, out value);
     }
 
     public object? Get(string name)
     {
-        return _dic[name];
+        return this[name];
     }
     
     public T _<T>(string name)
     {
-        var v = _dic[name];
+        var v = this[name];
         return v is null ? default! : (T)v;
     }
 
     public object? _(string name)
     {
-        return _dic[name];
+        return this[name];
     }
 }
