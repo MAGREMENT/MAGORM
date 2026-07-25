@@ -1,4 +1,4 @@
-﻿using APIConnector;
+﻿using API;
 using ORM.Abstract;
 using ORM.RecordTypes;
 
@@ -20,17 +20,25 @@ public enum DefaultEndpointOperations
     ALL = CREATE | READ | UPDATE | DELETE
 }
 
+public record DefaultEndpointDefinition(DefaultEndpointOperations Operation, IEnumerable<EndpointParameter> Parameters);
+
 public static class EndpointModelExtensions
 {
-    public static void DefineDefaultEndpoints(this IModel model, IEndpointDefiner definer, DefaultEndpointOperations operations)
+    public static void DefineDefaultEndpoints(this IModel model, IEndpointDefiner definer,
+        DefaultEndpointDefinition[] definitions)
     {
-        if((operations & DefaultEndpointOperations.CREATE) != 0)
-            definer.Define(GetCreateSpec(model));
-    }
-
-    private static EndpointSpecification<RecordDictionary[]> GetCreateSpec(IModel model)
-    {
-        return new EndpointSpecification<RecordDictionary[]>(EndpointType.POST, "/" + model.Name.ToLower() + "/create", 
-            (records) => model.Create<DictionaryRecord>(records));
+        foreach (var definition in definitions)
+        {
+            switch (definition.Operation)
+            {
+                case DefaultEndpointOperations.CREATE:
+                    definer.Define(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create", definition.Parameters),
+                        values =>
+                        {
+                            return model.Create<DictionaryRecord>(values);
+                        });
+                    break;
+            }
+        }
     }
 }

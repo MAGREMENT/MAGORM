@@ -1,4 +1,4 @@
-using APIConnector.ASP.NET.CORE;
+using API.ASP.NET.CORE;
 using Bridge.ORM.APIConnector;
 using ORM;
 using ORM.Abstract;
@@ -6,7 +6,7 @@ using ORM.Languages;
 using ORM.Languages.SQLite;
 using ORM.SQLite.Microsoft;
 
-namespace API;
+namespace Exemple.ASP.NET.CORE;
 
 public class Program
 {

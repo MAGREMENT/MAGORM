@@ -4,6 +4,8 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AssemblyName>API.ASP.NET.CORE</AssemblyName>
+        <RootNamespace>API.ASP.NET.CORE</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

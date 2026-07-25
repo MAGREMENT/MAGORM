@@ -24,9 +24,9 @@ public interface IModel : INamed, IAttachable<Database>
     
     public IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
 
-    public T Create<T>(IKeyValue<string, object?> values) where T : IRecord, new();
+    public T Create<T>(IReadOnlyKeyValue<string, object?> values) where T : IRecord, new();
 
-    public T[] Create<T>(params IKeyValue<string, object?>[] values) where T : IRecord, new();
+    public T[] Create<T>(params IReadOnlyKeyValue<string, object?>[] values) where T : IRecord, new();
 
     public List<T> Select<T>(QueryCondition? condition = null, params string[] fields) where T : IRecord, new();
 
@@ -108,12 +108,12 @@ public abstract class Model : IModel
     
     public abstract IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
     
-    public T Create<T>(IKeyValue<string, object?> values) where T : IRecord, new()
+    public T Create<T>(IReadOnlyKeyValue<string, object?> values) where T : IRecord, new()
     {
         return Create<T>([values])[0];
     }
 
-    public T[] Create<T>(params IKeyValue<string, object?>[] values) where T : IRecord, new()
+    public T[] Create<T>(params IReadOnlyKeyValue<string, object?>[] values) where T : IRecord, new()
     {
         if (_database is null) throw new Exception();
 

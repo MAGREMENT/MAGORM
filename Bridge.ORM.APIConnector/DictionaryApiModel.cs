@@ -1,4 +1,4 @@
-﻿using APIConnector;
+﻿using API;
 using ORM.Abstract;
 using ORM.ModelTypes;
 
@@ -9,8 +9,16 @@ public class DictionaryApiModel(string name, IFieldDefinition primaryKey, IField
 {
     public void DefineEndpoints(IEndpointDefiner definer)
     {
-        this.DefineDefaultEndpoints(definer, DefaultEndpointOperations.ALL);
+        this.DefineDefaultEndpoints(definer, [
+            new DefaultEndpointDefinition(DefaultEndpointOperations.CREATE, DefaultEndpointParameters())
+        ]);
+    }
+
+    private IEnumerable<EndpointParameter> DefaultEndpointParameters()
+    {
+        foreach (var val in AllFieldDefinitions)
+        {
+            yield return new EndpointParameter(val.Name, typeof(string) /*TODO*/);
+        }
     }
 }
-    
-    

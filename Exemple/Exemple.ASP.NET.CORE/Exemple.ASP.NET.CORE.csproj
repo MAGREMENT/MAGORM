@@ -4,6 +4,8 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>Exemple.ASP.NET.CORE</AssemblyName>
+        <RootNamespace>Exemple.ASP.NET.CORE</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\APIConnector.ASP.NET.CORE\APIConnector.ASP.NET.CORE.csproj" />
+      <ProjectReference Include="..\..\API.ASP.NET.CORE\API.ASP.NET.CORE.csproj" />
       <ProjectReference Include="..\..\ORM.SQLite.Microsoft\ORM.SQLite.Microsoft.csproj" />
     </ItemGroup>
 

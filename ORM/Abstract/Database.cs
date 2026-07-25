@@ -71,7 +71,7 @@ public class Database
         _engine.DropAllTables();
     }
 
-    public TRecord[] CreateRecords<TRecord>(IModel model, params IKeyValue<string, object?>[] values)
+    public TRecord[] CreateRecords<TRecord>(IModel model, params IReadOnlyKeyValue<string, object?>[] values)
         where TRecord : IRecord, new()
     {
         var result = new TRecord[values.Length];

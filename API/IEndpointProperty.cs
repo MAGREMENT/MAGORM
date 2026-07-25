@@ -1,4 +1,4 @@
-﻿namespace APIConnector;
+﻿namespace API;
 
 public interface IEndpointProperty;
 
