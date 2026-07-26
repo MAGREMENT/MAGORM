@@ -2,7 +2,7 @@
 using ORM.Abstract;
 using ORM.ModelTypes;
 
-namespace Bridge.ORM.APIConnector;
+namespace Bridge.ORM.API;
 
 public class DictionaryApiModel(string name, IFieldDefinition primaryKey, IFieldDefinition[] fields)
     : DictionaryModel(name, primaryKey, fields), IApiModel

@@ -7,8 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\API.ASP.NET.CORE\API.ASP.NET.CORE.csproj" />
       <ProjectReference Include="..\API\API.csproj" />
+      <ProjectReference Include="..\WebServer\WebServer.csproj" />
     </ItemGroup>
-    
 
 </Project>

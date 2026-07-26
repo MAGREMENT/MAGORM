@@ -1,10 +1,12 @@
 using API.ASP.NET.CORE;
-using Bridge.ORM.APIConnector;
+using Bridge.ORM.API;
 using ORM;
 using ORM.Abstract;
 using ORM.Languages;
 using ORM.Languages.SQLite;
 using ORM.SQLite.Microsoft;
+using WebServer.ASP.NET.CORE;
+using WebServer.StaticFiles;
 
 namespace Exemple.ASP.NET.CORE;
 
@@ -35,8 +37,12 @@ public class Program
             Fields.Reference("Author", "Author"));
         
         db.AddModels(author, book);
-
         app.MapModels(db);
+        
+        var staticFiles = new InMemoryStaticFileMapper();
+        staticFiles.MapStaticFilesDirectory("./JS", ".");
+        app.UseStaticFileMapper(staticFiles);
+        
         app.Run();
     }
 }

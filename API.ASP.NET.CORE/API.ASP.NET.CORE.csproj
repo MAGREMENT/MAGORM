@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Bridge.ORM.APIConnector\Bridge.ORM.APIConnector.csproj" />
+      <ProjectReference Include="..\Bridge.ORM.API\Bridge.ORM.API.csproj" />
     </ItemGroup>
 
 </Project>

@@ -4,11 +4,13 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AssemblyName>Bridge.ORM.API</AssemblyName>
+        <RootNamespace>Bridge.ORM.API</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\API\API.csproj" />
+      <ProjectReference Include="..\ORM\ORM.csproj" />
     </ItemGroup>
-    
 
 </Project>

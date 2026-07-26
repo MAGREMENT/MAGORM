@@ -2,7 +2,7 @@
 using ORM.Abstract;
 using ORM.RecordTypes;
 
-namespace Bridge.ORM.APIConnector;
+namespace Bridge.ORM.API;
 
 public interface IApiModel : IModel
 {
@@ -32,11 +32,8 @@ public static class EndpointModelExtensions
             switch (definition.Operation)
             {
                 case DefaultEndpointOperations.CREATE:
-                    definer.Define(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create", definition.Parameters),
-                        values =>
-                        {
-                            return model.Create<DictionaryRecord>(values);
-                        });
+                    definer.Define(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create"), 
+                        definition.Parameters, model.Create<DictionaryRecord>);
                     break;
             }
         }

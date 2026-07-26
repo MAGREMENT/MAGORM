@@ -45,13 +45,13 @@ export class Template {
         const result = [];
         walkDom(html, (el, path) => {
             let skipChildren = false;
-            if(el.nodeType == Node.TEXT_NODE) {
+            if(el.nodeType === Node.TEXT_NODE) {
                 const divided = divideTextNode(el.textContent);
                 if(divided.length > 1 || divided[0].evaluate) {
                     result.push(new TextBinding([...path], divided));
                 }
             }
-            else if(el.nodeType == Node.ELEMENT_NODE) {
+            else if(el.nodeType === Node.ELEMENT_NODE) {
                 let forValue = null;
                 let ofValue = null;
                 for(const attr of el.attributes) {
@@ -134,20 +134,20 @@ function divideTextNode(text) { //TODO probably remove text_expression
     let nextIndex;
     do {
         nextIndex = text.indexOf("{{", startIndex);
-        let endIndex = nextIndex == -1 ? text.length : nextIndex;
+        let endIndex = nextIndex === -1 ? text.length : nextIndex;
         result.push(text.substring(startIndex, endIndex));
 
         if(nextIndex >= 0) {
             nextIndex += 2;
             endIndex = text.indexOf("}}", nextIndex + 1);
-            if(nextIndex == -1) throw new Error("String expression not closed");
+            if(nextIndex === -1) throw new Error("String expression not closed");
 
             result.push(toExpression(text.substring(nextIndex, endIndex)))
             nextIndex = endIndex + 2;
         }
 
         startIndex = nextIndex + 1;
-    } while(nextIndex != -1);
+    } while(nextIndex !== -1);
 
     return result;
 }
@@ -202,7 +202,7 @@ class ConditionBinding {
     }
 
     update(element, component, context) {
-        if(element.nodeType == Node.COMMENT_NODE) {
+        if(element.nodeType === Node.COMMENT_NODE) {
             return this.add(element, component);
         } else if(!component[this.conditionName]) {
             return this.remove(element);

@@ -1,7 +1,7 @@
 ﻿using ORM;
 using ORM.Abstract;
 
-namespace Bridge.ORM.APIConnector;
+namespace Bridge.ORM.API;
 
 public class ApiModels
 {
