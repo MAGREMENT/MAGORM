@@ -15,9 +15,9 @@ public static class EndpointDefinerExtensions {
     {
         definer.AddDefaultHandler(path =>
         {
-            var filePath = mapper.GetStaticFile('.' + path); //TODO to results
-            if (filePath is null) return null;
-            return filePath;
+            var filePath = mapper.GetStaticFile('.' + path);
+            if (filePath is null) return new EndpointResult(EndpointResultType.NotFound);
+            return new EndpointResult(EndpointResultType.File, filePath);
         });
     }
 }

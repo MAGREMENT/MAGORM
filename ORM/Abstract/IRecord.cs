@@ -35,12 +35,3 @@ public static class RecordExtensions
         return true;
     }
 }
-
-public class RecordDictionary : Dictionary<string, object?>, IKeyValue<string, object?>
-{
-    public bool TryGet(string key, out object? value) => TryGetValue(key, out value);
-
-    public object? Get(string name) => this[name];
-
-    public void Set(string name, object? value) => this[name] = value;
-}

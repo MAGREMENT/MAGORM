@@ -1,9 +1,11 @@
-﻿using ORM;
+﻿using Base.Fields;
+using ORM;
 using ORM.Abstract;
 using ORM.Languages;
 using ORM.Languages.SQLite;
 using ORM.RecordTypes;
 using ORM.SQLite.Microsoft;
+using MissingFieldException = ORM.Abstract.MissingFieldException;
 
 namespace Tests;
 
@@ -59,12 +61,12 @@ public class DatabaseTests
             db.AddModels(m2);
             db.Sync();
 
-            var r1 = db.GetModel("Author")!.Create<DictionaryRecord>(new RecordDictionary
+            var r1 = m1.Create<DictionaryRecord>(new KeyValueDictionary
             {
                 {"Name", "Some Author"}
             });
 
-            var r2 = db.GetModel("Books")!.Create<DictionaryRecord>(new RecordDictionary
+            var r2 = m2.Create<DictionaryRecord>(new KeyValueDictionary
             {
                 {"Title", "Title Test"},
                 {"PageCount", 8},
@@ -73,13 +75,40 @@ public class DatabaseTests
                 {"Author", r1}
             });
 
-            var r2Selected = db.GetModel("Books")!.Select<DictionaryRecord>();
+            var r2Selected = m2.Select<DictionaryRecord>();
             Assert.That(r2Selected, Has.Count.EqualTo(1));
             Assert.That(r2.AreCommonFieldsEqual(r2Selected[0]));
 
-            r2Selected = db.GetModel("Books")!.Select<DictionaryRecord>(null, "Author.Name");
+            r2Selected = m2.Select<DictionaryRecord>(null, "Author.Name");
             Assert.That(r2Selected[0].Get("Author") is IRecord, Is.True);
             Assert.That(r2Selected[0]._<IRecord>("Author").Get("Name"), Is.EqualTo(r1.Get("Name")));
+        }
+    }
+
+    [Test]
+    public void CreateWithEmptyFieldTest()
+    {
+        var m1 = Models.DefineBase("Author",
+            Fields.String("Name"));
+
+        var m2 = Models.DefineBase("AuthorWithRequiredName",
+            Fields.String("Name", new FieldDefinitionsOptions
+            {
+                Required = true
+            }));
+
+        foreach (var db in _databases)
+        {
+            db.AddModels(m1);
+            db.AddModels(m2);
+            db.Sync();
+
+            var r1 = m1.Create<DictionaryRecord>(new KeyValueDictionary());
+            var r1Selected = m1.Select<DictionaryRecord>();
+            Assert.That(r1._<string>("Name"), Is.Null);
+            Assert.That(r1Selected[0]._<string>("Name"), Is.Null);
+
+            Assert.Throws<MissingFieldException>(() => m2.Create<DictionaryRecord>(new KeyValueDictionary()));
         }
     }
 }

@@ -1,17 +1,16 @@
-﻿using Base.Fields;
-
-namespace API;
+﻿namespace API;
 
 public interface IEndpointDefiner
 {
-    void Define(Endpoint endpoint, IEnumerable<EndpointParameter> parameters, EndpointOperation operation);
-
-    void Define<T>(Endpoint endpoint, T operation) where T : Delegate;
+    void DefineEndpoint(Endpoint endpoint);
 
     void AddDefaultHandler(DefaultHandler handler);
 }
 
-public delegate object? EndpointOperation(IReadOnlyKeyValue<string, object?> values);
+public interface IEndpointProvider
+{
+    public void DefineEndpoints(IEndpointDefiner definer);
+}
 
-public delegate object? DefaultHandler(string path);
+public delegate EndpointResult DefaultHandler(string path);
 

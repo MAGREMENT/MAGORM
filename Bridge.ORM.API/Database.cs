@@ -5,12 +5,12 @@ namespace Bridge.ORM.API;
 
 public static class DatabaseExtensions
 {
-    public static void AddModelsEndpoints(this Database database, IEndpointDefiner definer)
+    public static void DefineModelsEndpoints(this Database database, IEndpointDefiner definer)
     {
         foreach (var model in database.EnumerateModels())
         {
-            if(model is not IApiModel em) continue;
-            em.DefineEndpoints(definer);
+            if(model is not IEndpointProvider ep) continue;
+            ep.DefineEndpoints(definer);
         }
     }
 }

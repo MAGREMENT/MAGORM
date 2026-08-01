@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\API.ASP.NET.CORE\API.ASP.NET.CORE.csproj" />
+      <ProjectReference Include="..\..\Bridge.ORM.WebServer\Bridge.ORM.WebServer.csproj" />
       <ProjectReference Include="..\..\ORM.SQLite.Microsoft\ORM.SQLite.Microsoft.csproj" />
       <ProjectReference Include="..\..\Scripts\Scripts.csproj" />
       <ProjectReference Include="..\..\WebServer.ASP.NET.CORE\WebServer.ASP.NET.CORE.csproj" />

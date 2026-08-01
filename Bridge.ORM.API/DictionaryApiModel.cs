@@ -4,8 +4,8 @@ using ORM.ModelTypes;
 
 namespace Bridge.ORM.API;
 
-public class DictionaryApiModel(string name, IFieldDefinition primaryKey, IFieldDefinition[] fields)
-    : DictionaryModel(name, primaryKey, fields), IApiModel
+public class DictionaryApiModel(string name, IFieldDefinition primaryKey, params IFieldDefinition[] fields)
+    : DictionaryModel(name, primaryKey, fields), IEndpointProvider
 {
     public void DefineEndpoints(IEndpointDefiner definer)
     {
@@ -14,11 +14,12 @@ public class DictionaryApiModel(string name, IFieldDefinition primaryKey, IField
         ]);
     }
 
-    private IEnumerable<EndpointParameter> DefaultEndpointParameters()
+    private IEnumerable<EndpointParameterCheck> DefaultEndpointParameters()
     {
         foreach (var val in AllFieldDefinitions)
         {
-            yield return new EndpointParameter(val.Name, typeof(string) /*TODO*/);
+            if(val.Options.AutoIncrement) continue;
+            yield return new EndpointParameterCheck(val.Name, typeof(string) /*TODO*/);
         }
     }
 }

@@ -1,13 +1,9 @@
 ﻿using API;
+using Base.Fields;
 using ORM.Abstract;
 using ORM.RecordTypes;
 
 namespace Bridge.ORM.API;
-
-public interface IApiModel : IModel
-{
-    public void DefineEndpoints(IEndpointDefiner definer);
-}
 
 [Flags]
 public enum DefaultEndpointOperations
@@ -20,7 +16,7 @@ public enum DefaultEndpointOperations
     ALL = CREATE | READ | UPDATE | DELETE
 }
 
-public record DefaultEndpointDefinition(DefaultEndpointOperations Operation, IEnumerable<EndpointParameter> Parameters);
+public record DefaultEndpointDefinition(DefaultEndpointOperations Operation, IEnumerable<EndpointParameterCheck> Parameters);
 
 public static class EndpointModelExtensions
 {
@@ -32,8 +28,10 @@ public static class EndpointModelExtensions
             switch (definition.Operation)
             {
                 case DefaultEndpointOperations.CREATE:
-                    definer.Define(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create"), 
-                        definition.Parameters, model.Create<DictionaryRecord>);
+                    definer.DefineEndpoint(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create", 
+                        (KeyValueDictionary[] values)
+                            => new EndpointResult(EndpointResultType.Json, model.Create<DictionaryRecord>(values)),
+                        definition.Parameters));
                     break;
             }
         }

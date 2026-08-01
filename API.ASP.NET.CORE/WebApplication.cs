@@ -1,59 +1,16 @@
-﻿using System.Reflection.Metadata;
-using System.Text.Json;
-using Bridge.ORM.API;
+﻿using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using ORM.Abstract;
 
 namespace API.ASP.NET.CORE;
 
-public static class WebApplicationExtensions
-{
-    public static void MapModels(this WebApplication app, Database database)
-    {
-        var definer = new WebApplicationEndpointDefiner(app);
-        database.AddModelsEndpoints(definer);
-    }
-}
-
 public class WebApplicationEndpointDefiner(WebApplication _app) : IEndpointDefiner
 {
-    public void Define(Endpoint endpoint, IEnumerable<EndpointParameter> parameters, EndpointOperation operation)
+    public void DefineEndpoint(Endpoint endpoint)
     {
-        var builder = _app.MapMethods(endpoint.Route, [endpoint.Type.ToString()], async (HttpContext context) =>
-        {
-            var body = await context.Request.ReadFromJsonAsync<JsonElement>();
-            RecordDictionary values = new();
-            foreach (var parameter in parameters)
-            {
-                if (!body.TryGetProperty(parameter.Name, out var jsonValue))
-                    return Results.BadRequest($"Parameter {parameter.Name} missing");
-
-                object? value;
-                try
-                {
-                    value = JsonSerializer.Deserialize(jsonValue.GetRawText(), parameter.Type);
-                }
-                catch(JsonException)
-                {
-                    return Results.BadRequest($"Parameter {parameter.Name} has wrong type, should be {parameter.Type.Name}");
-                }
-
-                if (parameter.Check is not null && !parameter.Check(value))
-                    return Results.BadRequest($"Parameter {parameter.Name} is invalid");
-
-                values.Add(parameter.Name, value);
-            }
-
-            operation(values);
-            return Results.Ok();
-        }).Accepts(typeof(Dictionary<string, object?>), "application/json");
-    }
-
-    public void Define<T>(Endpoint endpoint, T operation) where T : Delegate
-    {
-        _app.MapGet(endpoint.Route, operation)
-            .AddEndpointFilter(HandleEndpointResult);
+        var builder = _app.MapMethods(endpoint.Route, [endpoint.Type.ToString()], endpoint.Operation)
+            .AddEndpointFilter(DictionaryJsonToObjectFiler)
+            .AddEndpointFilter(HandleEndpointResultFilter);
     }
 
     public void AddDefaultHandler(DefaultHandler handler)
@@ -64,27 +21,85 @@ public class WebApplicationEndpointDefiner(WebApplication _app) : IEndpointDefin
 
             if (context.Response is { StatusCode: 404, HasStarted: false })
             {
-                var result = handler(context.Request.Path);
-                if (result is string s)
-                {
-                    var r = Results.File(s, GetContentType(Path.GetExtension(s)));
-                    context.Response.StatusCode = 200;
-                    await r.ExecuteAsync(context);
-                }
+                var result = ToIResult(handler(context.Request.Path));
+                context.Response.StatusCode = 200;
+                await result.ExecuteAsync(context);
             }
         });
     }
 
-    private static async ValueTask<object?> HandleEndpointResult(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    private static async ValueTask<object?> DictionaryJsonToObjectFiler(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        var result = await next(context);
-        //TODO correct result handling
-        if (result is string s)
+        foreach(var arg in context.Arguments)
         {
-            return Results.File(s, GetContentType(Path.GetExtension(s)));
+            if(arg is Dictionary<string, object?> dic) ConvertDictionaryJsonToObject(dic);
+            else if (arg is Dictionary<string, object?>[] dicArray)
+            {
+                foreach (var d in dicArray)
+                {
+                    ConvertDictionaryJsonToObject(d);
+                }
+            }
         }
         
-        return result;
+        return await next(context);
+    }
+
+    private static void ConvertDictionaryJsonToObject(Dictionary<string, object?> dic)
+    {
+        foreach (var entry in dic)
+        {
+            if(entry.Value is null) continue;
+            dic[entry.Key] = ToObject((JsonElement)entry.Value);
+        }
+    }
+    
+    private static object? ToObject(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+
+            JsonValueKind.Number =>
+                element.TryGetInt32(out var i) ? i :
+                element.TryGetInt64(out var l) ? l :
+                element.TryGetDecimal(out var d) ? d :
+                element.GetDouble(),
+
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => null,
+
+            JsonValueKind.Array =>
+                element.EnumerateArray().Select(ToObject).ToArray(),
+
+            JsonValueKind.Object =>
+                element.EnumerateObject()
+                    .ToDictionary(p => p.Name, p => ToObject(p.Value)),
+
+            _ => null
+        };
+    }
+
+    private static async ValueTask<object?> HandleEndpointResultFilter(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var result = await next(context);
+        if (result is not EndpointResult er) throw new Exception("Should return an endpoint result");
+        
+        return ToIResult(er);
+    }
+
+    private static IResult ToIResult(EndpointResult er)
+    {
+        return er.Type switch
+        {
+            EndpointResultType.File => Results.File((string)er.Value,
+                GetContentType(Path.GetExtension((string)er.Value))),
+            EndpointResultType.Json => Results.Json(er.Value),
+            EndpointResultType.NotFound => Results.NotFound(),
+            EndpointResultType.BadRequest => Results.BadRequest(er.Value),
+            EndpointResultType.Content => Results.Content((string)er.Value, "text/html") //TODO
+        };
     }
 
     private static string GetContentType(string extension)

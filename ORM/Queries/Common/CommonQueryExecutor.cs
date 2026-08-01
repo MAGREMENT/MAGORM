@@ -127,7 +127,7 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         {
             var p = cmd.CreateParameter();
             p.ParameterName = "@" + i;
-            p.Value = query.Parameters[i];
+            p.Value = query.Parameters[i] ?? DBNull.Value;
             cmd.Parameters.Add(p);
         }
         

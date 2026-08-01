@@ -90,15 +90,17 @@ public class Database
             
             foreach (var field in fields)
             {
-                if (val.TryGet(field.Name, out var v))
+                if (!val.TryGet(field.Name, out var v))
                 {
-                    if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
-                    
-                    fieldNames.Add(field.Name);
-                    record.Init(field.Name, r);
-                    parameters.AddRange(r!);
+                    if(field.Options.AutoIncrement) continue;
+                    if (field.Options.Required) throw new MissingFieldException(field);
                 }
-                else if (field.Options is { Required: true, AutoIncrement: false }) throw new Exception(); //TODO maybe not exception
+                
+                if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
+                    
+                fieldNames.Add(field.Name);
+                record.Init(field.Name, r);
+                parameters.Add(r!);
             }
             
             stacker.Insert(new InsertSpecification(model.Name, fieldNames.ToArray(),
@@ -358,3 +360,6 @@ public class SelectTree : Dictionary<IModel, SelectTreeModelInfo>, IDependencyCo
         return info;
     }
 }
+
+public class MissingFieldException(IFieldDefinition definition) 
+    : Exception($"The field {definition.Name} is required and missing from the values");
