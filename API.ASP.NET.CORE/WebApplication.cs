@@ -1,14 +1,39 @@
 ﻿using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
+using Microsoft.Extensions.Primitives;
 
 namespace API.ASP.NET.CORE;
 
-public class WebApplicationEndpointDefiner(WebApplication _app) : IEndpointDefiner
+public class WebApplicationApi : IApi
 {
+    private readonly WebApplication _app;
+    private readonly DynamicEndpointDataSource _dynamic = new();
+    private bool _started;
+
+    public WebApplicationApi(WebApplication app)
+    {
+        _app = app;
+        ((IEndpointRouteBuilder)_app).DataSources.Add(_dynamic);
+    }
+    
     public void DefineEndpoint(Endpoint endpoint)
     {
-        var builder = _app.MapMethods(endpoint.Route, [endpoint.Type.ToString()], endpoint.Operation)
+        if (_started)
+        {
+            var builder = new RouteEndpointBuilder(
+                RequestDelegateFactory.Create(endpoint.Operation).RequestDelegate,
+                RoutePatternFactory.Parse(endpoint.Route),
+                0);
+        
+            builder.FilterFactories.Insert(builder.FilterFactories.Count, (_, next) => context => DictionaryJsonToObjectFiler(context, next));
+            builder.FilterFactories.Insert(builder.FilterFactories.Count, (_, next) => context => HandleEndpointResultFilter(context, next));
+            _dynamic.Add([(RouteEndpoint)builder.Build()]);
+        }
+
+        _app.MapMethods(endpoint.Route, [endpoint.Type.ToString()], endpoint.Operation)
             .AddEndpointFilter(DictionaryJsonToObjectFiler)
             .AddEndpointFilter(HandleEndpointResultFilter);
     }
@@ -26,6 +51,12 @@ public class WebApplicationEndpointDefiner(WebApplication _app) : IEndpointDefin
                 await result.ExecuteAsync(context);
             }
         });
+    }
+
+    public void Start()
+    {
+        _started = true;
+        _app.RunAsync();
     }
 
     private static async ValueTask<object?> DictionaryJsonToObjectFiler(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -132,5 +163,54 @@ public class WebApplicationEndpointDefiner(WebApplication _app) : IEndpointDefin
 
             _                  => "application/octet-stream"
         };
+    }
+}
+
+//TODO Does not work ??? https://www.mariusgundersen.net/article/2021-dynamic-endpoint-routing/
+public class DynamicEndpointDataSource : EndpointDataSource
+{
+    private readonly Lock _lock = new Lock();
+    private readonly List<RouteEndpoint> _endpoints = new();
+
+    private CancellationTokenSource? _cancellationTokenSource;
+
+    private IChangeToken? _changeToken;
+
+
+    public override IReadOnlyList<RouteEndpoint> Endpoints
+    {
+        get
+        {
+            RouteEndpoint[] result;
+            lock (_lock)
+            {
+                result = _endpoints.ToArray();
+            }
+
+            return result;
+        }
+    }
+
+    public override IChangeToken GetChangeToken()
+        => _changeToken!;
+
+    public void Add(RouteEndpoint[] endpoints)
+    {
+        lock (_lock)
+        {
+            _endpoints.AddRange(endpoints);
+        }
+        
+        NotifyChanged();
+    }
+
+    private void NotifyChanged()
+    {
+        var oldCancellationTokenSource = _cancellationTokenSource;
+        
+        _cancellationTokenSource = new CancellationTokenSource();
+        _changeToken = new CancellationChangeToken(_cancellationTokenSource.Token);
+
+        oldCancellationTokenSource?.Cancel();
     }
 }

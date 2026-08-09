@@ -1,4 +1,4 @@
-﻿namespace WebServer.StaticFiles;
+﻿namespace API.StaticFiles;
 
 public class InMemoryStaticFileMapper : IStaticFileMapper
 {

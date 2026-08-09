@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\API\API.csproj" />
+      <ProjectReference Include="..\Base\Base.csproj" />
+      <ProjectReference Include="..\Bridge.ORM.API\Bridge.ORM.API.csproj" />
+      <ProjectReference Include="..\ORM\ORM.csproj" />
+      <ProjectReference Include="..\WebServer\WebServer.csproj" />
+    </ItemGroup>
+
+</Project>

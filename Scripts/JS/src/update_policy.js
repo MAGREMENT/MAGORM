@@ -1,5 +1,3 @@
-import { Template } from "./template.js";
-
 class UpdatePolicy {
     onTemplateAttached(component) {
         

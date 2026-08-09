@@ -7,7 +7,7 @@ public static class WebApplicationExtensions
 {
     public static void UseStaticFileMapper(this WebApplication app, IStaticFileMapper mapper)
     {
-        var definer = new WebApplicationEndpointDefiner(app);
+        var definer = new WebApplicationApi(app);
         definer.UseStaticFiles(mapper);
     }
 }

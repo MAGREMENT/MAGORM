@@ -21,6 +21,8 @@ public interface ITransaction : IQueryExecutor
 
 public interface IDatabaseEngine : IQueryExecutor
 {
+    ISqlLanguage Language { get; }
+    
     public ITransaction CreateTransaction();
 
     public IReadOnlyList<CreateSpecification> GetModelSchemas();

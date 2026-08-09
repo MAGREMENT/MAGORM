@@ -139,6 +139,8 @@ public abstract class CommonDatabaseEngine<T>
     : CommonQueryExecutor<T>, IDatabaseEngine
     where T : DbConnection
 {
+    public abstract ISqlLanguage Language { get; }
+    
     protected override bool ShouldDisposeOfConnection => true;
     
     public abstract ITransaction CreateTransaction();

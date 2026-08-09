@@ -1,10 +1,11 @@
 ﻿using System.Data.Common;
 using MySql.Data.MySqlClient;
+using ORM.Languages;
 using ORM.Queries;
 using ORM.Queries.Common;
 using ORM.Queries.Specifications;
 
-namespace ADO.NET.MYSQL;
+namespace ORM.MySQL;
 
 public class MySqlDatabaseEngine(string connectionString) : CommonDatabaseEngine<MySqlConnection>
 {
@@ -17,6 +18,8 @@ public class MySqlDatabaseEngine(string connectionString) : CommonDatabaseEngine
     {
         return new MySqlCommand(query, connection);
     }
+
+    public override ISqlLanguage Language => SQL.MySql;
 
     public override ITransaction CreateTransaction()
     {

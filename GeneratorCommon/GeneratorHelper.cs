@@ -1,15 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace BaseGenerator;
+namespace GeneratorCommon;
 
 public static class GeneratorHelper
 {
-    public static bool IsValidSyntax(object? syntax)
+    public static bool IsSyntaxNotNull(object? syntax)
     {
         return syntax is not null;
+    }
+    
+    public static bool HasSyntaxTargetAtLeastOneAttribute(SyntaxNode node, CancellationToken token)
+        => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
+
+    public static Func<GeneratorSyntaxContext, CancellationToken, INamedTypeSymbol?> 
+        GetSemanticTargetNonAbstractClassWithAttribute(string attributeName)
+    {
+        return (context, _) =>
+        {
+            var classSyntax = (ClassDeclarationSyntax)context.Node;
+            foreach (var modifier in classSyntax.Modifiers)
+            {
+                if (modifier.IsKind(SyntaxKind.AbstractKeyword)) return null;
+            }
+
+            foreach (var attributeListSyntax in classSyntax.AttributeLists)
+            {
+                foreach (var attributeSyntax in attributeListSyntax.Attributes)
+                {
+                    var attributeSymbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, attributeSyntax).Symbol;
+                    if (IsOrInherits(attributeSymbol?.ContainingType,
+                            attributeName))
+                    {
+                        return ModelExtensions.GetDeclaredSymbol(context.SemanticModel,
+                            classSyntax) as INamedTypeSymbol;
+                    }
+                }
+            }
+
+            return null;
+        };
     }
     
     public static bool IsOrInherits(INamedTypeSymbol? symbol, string type)

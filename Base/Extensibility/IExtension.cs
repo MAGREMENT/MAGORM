@@ -2,9 +2,9 @@
 
 namespace Base.Extensibility;
 
-public interface IExtension<out TMethodIndentifier>
+public interface IExtension<out TMethodIdentifier>
 {
-    public IEnumerable<TMethodIndentifier> GetAffectedMethods();
+    public IEnumerable<TMethodIdentifier> GetAffectedMethods();
 }
 
 public abstract class DynamicReflectiveExtension : IExtension<int>

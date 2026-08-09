@@ -1,9 +1,9 @@
-import { Component } from "../component.js";
-import { suite, test, assert, fail } from "./testing.js";
-import { addComponent, applyComponents } from "../main.js";
-import { stringToDom } from "../util.js";
-import { generateSetupDom, runSteps } from "./testing_util.js";
-import { RenderOnEvent, UpdateOnEvent } from "../update_policy.js";
+import { Component } from "../src/component.js";
+import { suite, test, assert, fail } from "./core/testing.js";
+import { addComponent, applyComponents } from "../src/main.js";
+import { stringToDom } from "../src/util.js";
+import { generateSetupDom, runSteps } from "./core/testing_util.js";
+import { RenderOnEvent, UpdateOnEvent } from "../src/update_policy.js";
 
 class EmptyComponent extends Component {}
 const emptyHtml = "<p>Beautiful</p>";

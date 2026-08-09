@@ -1,6 +1,7 @@
 ﻿using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using ORM.Abstract;
+using ORM.Languages;
 using ORM.Queries;
 using ORM.Queries.Common;
 using ORM.Queries.Specifications;
@@ -20,6 +21,8 @@ public class SQLiteDatabaseEngine(string connectionString) : CommonDatabaseEngin
         cmd.CommandText = query;
         return cmd;
     }
+
+    public override ISqlLanguage Language => SQL.SqLite;
 
     public override ITransaction CreateTransaction()
     {

@@ -1,5 +1,5 @@
-import { addComponent, applyComponents, setUpdatePolicy } from "../main.js";
-import { stringToDom } from "../util.js";
+import { applyComponents, setUpdatePolicy } from "../../src/main.js";
+import { stringToDom } from "../../src/util.js";
 import { assert, fail } from "./testing.js";
 
 export function generateSetupDom(html) {

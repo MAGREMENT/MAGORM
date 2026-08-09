@@ -16,7 +16,7 @@ public class DatabaseTests
     [SetUp]
     public void SetupDatabases()
     {
-        _databases.Add(new Database(new SqLiteLanguage(), 
+        _databases.Add(new Database(
             new SQLiteDatabaseEngine("Data Source=test.db"), 
             new DictionaryModelBank()));
         

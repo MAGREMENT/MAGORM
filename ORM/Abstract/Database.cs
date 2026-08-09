@@ -8,14 +8,12 @@ namespace ORM.Abstract;
 
 public class Database
 {
-    private readonly ISqlLanguage _sqlLanguage;
     private readonly IDatabaseEngine _engine;
     private readonly IModelBank _modelBank;
     private readonly DirtyCollection _dirty = new();
 
-    public Database(ISqlLanguage sqlLanguage, IDatabaseEngine engine, IModelBank modelBank)
+    public Database(IDatabaseEngine engine, IModelBank modelBank)
     {
-        _sqlLanguage = sqlLanguage;
         _engine = engine;
         _modelBank = modelBank;
     }
@@ -47,7 +45,7 @@ public class Database
             currentSpecifications.Add(s.Model, s);
         }
 
-        var stacker = _sqlLanguage.InitQueryBuilder();
+        var stacker = _engine.Language.InitQueryBuilder();
         foreach (var desiredModel in _modelBank.EnumerateModels())
         {
             var desiredSpecification = desiredModel.GenerateSpecification();
@@ -75,7 +73,7 @@ public class Database
         where TRecord : IRecord, new()
     {
         var result = new TRecord[values.Length];
-        var stacker = _sqlLanguage.InitQueryBuilder();
+        var stacker = _engine.Language.InitQueryBuilder();
         var fieldNames = new List<string>();
         var fields = model.AllFieldDefinitions;
         var parameters = new List<object>();
@@ -158,7 +156,7 @@ public class Database
             parameters = [];
         } else (whereSpecification, parameters) = where.Compile();
 
-        var stacker = _sqlLanguage.InitQueryBuilder();
+        var stacker = _engine.Language.InitQueryBuilder();
         var modelsInDependencyOrder = DependencyResolutionAlgorithms.Best(tree);
         foreach (var model in modelsInDependencyOrder)
         {
@@ -177,7 +175,7 @@ public class Database
                 var modelConditions = new QueryCondition[info.References.Count];
                 var pkName = model.GetPrimaryKey().Name; //TODO need to handle situation where pk is not the referenced field
                 var i = 0;
-                var subQueryBuilder = _sqlLanguage.InitQueryBuilder();
+                var subQueryBuilder = _engine.Language.InitQueryBuilder();
                 foreach (var modelRef in info.References)
                 {
                     subQueryBuilder.Reset();

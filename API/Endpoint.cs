@@ -16,4 +16,8 @@ public enum EndpointResultType
     File, Json, Content, NotFound, BadRequest
 }
 
-public record EndpointResult(EndpointResultType Type, object? Value = null);
+public record EndpointResult(EndpointResultType Type, object? Value = null)
+{
+    public static EndpointResult Content(string s) => new(EndpointResultType.Content, s);
+    //TODO others
+}

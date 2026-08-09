@@ -6,6 +6,8 @@ namespace ORM.Abstract;
 public interface IRecord : IFieldCollection
 {
     void Init(string name, object? value);
+
+    IModel GetModel();
 }
 
 public static class RecordExtensions

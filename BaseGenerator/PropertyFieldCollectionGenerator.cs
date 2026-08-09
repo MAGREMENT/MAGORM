@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
+using GeneratorCommon;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace BaseGenerator;
@@ -17,37 +15,12 @@ public static class PropertyFieldCollectionGenerator
     public static void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var declarations = context.SyntaxProvider
-            .CreateSyntaxProvider(IsSyntaxTargetForGeneration, GetSemanticTargetForGeneration)
-            .Where(GeneratorHelper.IsValidSyntax);
+            .CreateSyntaxProvider(GeneratorHelper.HasSyntaxTargetAtLeastOneAttribute,
+                GeneratorHelper.GetSemanticTargetNonAbstractClassWithAttribute(PropertyFieldCollectionAttributeFullName))
+            .Where(GeneratorHelper.IsSyntaxNotNull);
         
         context.RegisterSourceOutput(declarations, GenerateSources);
     }
-    
-    private static bool IsSyntaxTargetForGeneration(SyntaxNode node, CancellationToken token)
-        => node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
-    
-    private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        var classSyntax = (ClassDeclarationSyntax)context.Node;
-        foreach (var modifier in classSyntax.Modifiers)
-        {
-            if (modifier.IsKind(SyntaxKind.AbstractKeyword)) return null;
-        }
-        foreach (var attributeListSyntax in classSyntax.AttributeLists)
-        {
-            foreach (var attributeSyntax in attributeListSyntax.Attributes)
-            {
-                var attributeSymbol = ModelExtensions.GetSymbolInfo(context.SemanticModel, attributeSyntax).Symbol;
-                if (attributeSymbol?.ContainingType?.ToDisplayString() == PropertyFieldCollectionAttributeFullName)
-                {
-                    return ModelExtensions.GetDeclaredSymbol(context.SemanticModel, classSyntax) as INamedTypeSymbol;
-                }
-            }
-        }
-        
-        return null;
-    }
-
 
     private static void GenerateSources(SourceProductionContext context, INamedTypeSymbol? symbol)
     {

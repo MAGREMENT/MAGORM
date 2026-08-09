@@ -1,6 +1,4 @@
-﻿using API;
-
-namespace WebServer;
+﻿namespace API;
 
 public interface IStaticFileMapper
 {
@@ -16,8 +14,9 @@ public static class EndpointDefinerExtensions {
         definer.AddDefaultHandler(path =>
         {
             var filePath = mapper.GetStaticFile('.' + path);
-            if (filePath is null) return new EndpointResult(EndpointResultType.NotFound);
-            return new EndpointResult(EndpointResultType.File, filePath);
+            return filePath is null ? 
+                new EndpointResult(EndpointResultType.NotFound) :
+                new EndpointResult(EndpointResultType.File, filePath);
         });
     }
 }

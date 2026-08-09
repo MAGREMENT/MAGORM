@@ -1,5 +1,5 @@
-import { toExpression } from "../expression.js";
-import { assert, suite, test } from "./testing.js";
+import { toExpression } from "../src/expression.js";
+import { assert, suite, test } from "./core/testing.js";
 
 function testExpression(name, str, expected) {
     return test(name, (context) => {

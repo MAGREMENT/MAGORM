@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Threading;
+using GeneratorCommon;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -20,7 +21,7 @@ public static class ExtensibleGenerator
                 ExtensibleClassAttributeFullName,
                 IsSyntaxTargetForGeneration,
                 GetSemanticTargetForGeneration)
-            .Where(GeneratorHelper.IsValidSyntax);
+            .Where(GeneratorHelper.IsSyntaxNotNull);
 
         var declarationsWithCompiler = declarations.Combine(context.CompilationProvider);
         context.RegisterSourceOutput(declarationsWithCompiler, (a, b) => GenerateSources(a, b.Left, b.Right));
