@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using GeneratorCommon;
@@ -65,7 +64,7 @@ public static class ExtensibleGenerator
             }
         }
 
-        var collectionName = attr.ExtensionName + "ExtensionCollection";
+        var collectionName = $"IExtensionCollection<{attr.ExtensionName}, int>";
         var builder = new StringBuilder();
         
         var sourceHeader = $"""
@@ -78,29 +77,19 @@ public static class ExtensibleGenerator
         builder.Append(sourceHeader);
         
         CreateBaseStruct(builder, attr.BaseName, attr.Symbol.Name, collectionName, extensibleMethods);
-        
-        var diag = CreateCollectionClass(builder, collectionName, attr.ExtensionName, attr.BaseName, attr.Symbol.Name,
-            extensibleMethods);
-        if (diag is not null)
-        {
-            //TODO return diag instead of diag descriptor
-            context.ReportDiagnostic(Diagnostic.Create(diag, attr.Symbol.Locations.FirstOrDefault()));
-        }
-        
-        CreateExtensibleClass(builder, attr.Symbol.Name, collectionName, extensibleMethods);
-
+        CreateExtensibleClass(builder, attr.Symbol.Name, collectionName, attr.BaseName, extensibleMethods);
         CreateExtensionClass(builder, attr.ExtensionName, attr.BaseName, extensibleMethods);
 
         context.AddSource($"{attr.Symbol.Name}.g.cs", SourceText.From(builder.ToString(), Encoding.UTF8));
     }
 
     private static void CreateExtensibleClass(StringBuilder builder, string extensibleName, string collectionName,
-        IReadOnlyList<ExtensibleMethodAttributes> methodList)
+        string baseName, IReadOnlyList<ExtensibleMethodAttributes> methodList)
     {
         var methodBuilder = new StringBuilder();
         foreach (var method in methodList)
         {
-            CreateExtensibleMethod(methodBuilder, method);
+            CreateExtensibleMethod(methodBuilder, method, baseName);
         }
         
         var result = $$"""
@@ -119,7 +108,7 @@ public static class ExtensibleGenerator
         builder.Append(result);
     }
 
-    private static void CreateExtensibleMethod(StringBuilder builder, ExtensibleMethodAttributes method)
+    private static void CreateExtensibleMethod(StringBuilder builder, ExtensibleMethodAttributes method, string baseName)
     {
         GeneratorHelper.CreateMethodSignature(builder, method.Symbol, null, "partial");
         builder.Append("\t\tif(_extensionCollection is null) ");
@@ -145,7 +134,9 @@ public static class ExtensibleGenerator
 
         builder.Append("\t\telse ");
         if (!method.Symbol.ReturnsVoid) builder.Append("return ");
-        builder.Append("_extensionCollection.");
+        builder.Append("new ");
+        builder.Append(baseName);
+        builder.Append("(this, _extensionCollection, _extensionCollection.BaseState).");
         builder.Append(method.Symbol.Name);
         builder.Append('(');
         for (int i = 0; i < method.Symbol.Parameters.Length; i++)
@@ -153,18 +144,17 @@ public static class ExtensibleGenerator
             if (i > 0) builder.Append(", ");
             builder.Append(method.Symbol.Parameters[i].Name);
         }
-
-        builder.Append(", this, ");
-        builder.Append("_extensionCollection.BaseState);\n\t}\n");
+        
+        builder.Append(");\n\t}\n");
     }
 
     private static void CreateBaseStruct(StringBuilder builder, string baseName, string extendedName, string collectionName,
         IReadOnlyList<ExtensibleMethodAttributes> methodList)
     {
         var methodBuilder = new StringBuilder();
-        foreach (var method in methodList)
+        for(int i = 0; i < methodList.Count; i++)
         {
-            CreateBaseMethod(methodBuilder, method.Symbol);
+            CreateBaseMethod(methodBuilder, methodList[i], i, baseName);
         }
 
         var result = $$"""
@@ -187,58 +177,11 @@ public static class ExtensibleGenerator
         builder.Append(result);
     }
 
-    private static void CreateBaseMethod(StringBuilder builder, IMethodSymbol symbol)
-    {
-        GeneratorHelper.CreateMethodSignature(builder, symbol);
-        builder.Append("\t\t");
-        if (!symbol.ReturnsVoid) builder.Append("return ");
-        builder.Append("_collection.");
-        builder.Append(symbol.Name);
-        builder.Append('(');
-        for (int i = 0; i < symbol.Parameters.Length; i++)
-        {
-            if (i != 0) builder.Append(", ");
-            builder.Append(symbol.Parameters[i].Name);
-        }
-
-        builder.Append(", Subject, _state);\n");
-        builder.Append("\t}\n\n");
-    }
-
-    private static DiagnosticDescriptor? CreateCollectionClass(StringBuilder builder, string collectionName, string extensionName, string baseName,
-        string extendedName, IReadOnlyList<ExtensibleMethodAttributes> methodList)
-    {
-        var methodBuilder = new StringBuilder();
-        for(int i = 0; i < methodList.Count; i++)
-        {
-            var diag = CreateCollectionMethod(methodBuilder, methodList[i], extendedName, baseName, i);
-            if (diag is not null) return diag;
-        }
-        
-        var result = $$"""
-        public partial class {{collectionName}} : ListExtensionCollection<{{extensionName}}>
-        {
-        {{methodBuilder}}
-        }
-        
-        """;
-
-        builder.Append(result);
-        return null;
-    }
-    
-    private static DiagnosticDescriptor? CreateCollectionMethod(StringBuilder builder, ExtensibleMethodAttributes method, string extendedName, 
-        string baseName, int identifier)
+    private static void CreateBaseMethod(StringBuilder builder, ExtensibleMethodAttributes method, int identifier, string baseName)
     {
         var symbol = method.Symbol;
-        GeneratorHelper.CreateMethodSignature(builder, symbol, b =>
-        {
-            b.Append(", ");
-            b.Append(extendedName);
-            b.Append(" subject, int state");
-        });
-
-        builder.Append("\t\tvar next = Next(state, ");
+        GeneratorHelper.CreateMethodSignature(builder, symbol);
+        builder.Append("\t\tvar next = _collection.Next(_state, ");
         builder.Append(identifier);
         builder.Append(");\n");
         builder.Append("\t\tif(next is not null) ");
@@ -255,14 +198,14 @@ public static class ExtensibleGenerator
         if (i > 0) builder.Append(", ");
         builder.Append("new ");
         builder.Append(baseName);
-        builder.Append("(subject, this, state + 1)");
+        builder.Append("(Subject, _collection, _state + 1)");
 
         builder.Append(");\n");
         builder.Append("\t\telse ");
         if (method.BaseImplementation is not null)
         {
             if (!symbol.ReturnsVoid) builder.Append("return ");
-            builder.Append("subject.");
+            builder.Append("Subject.");
             builder.Append(method.BaseImplementation);
             builder.Append('(');
             for (i = 0; i < symbol.Parameters.Length; i++)
@@ -274,14 +217,13 @@ public static class ExtensibleGenerator
         }
         else
         {
-            if (symbol.ReturnsVoid) builder.Append("if (state == BaseState) ");
+            if (symbol.ReturnsVoid) builder.Append("if (_state == _collection.BaseState) ");
             builder.Append("throw new MissingBehaviorException(nameof(");
             builder.Append(method.Symbol.Name);
             builder.Append("));\n");
         }
         
         builder.Append("\t}\n\n");
-        return null;
     }
 
     private static void CreateExtensionClass(StringBuilder builder, string extensionName, string baseName,
@@ -292,7 +234,7 @@ public static class ExtensibleGenerator
         for(int i = 0; i < methodList.Count; i++)
         {
             CreateExtensionMethod(methodBuilder, methodList[i].Symbol, baseName);
-            switchBuilder.Append("\t\t\"");
+            switchBuilder.Append("\t\t\t\"");
             switchBuilder.Append(methodList[i].Symbol.Name);
             switchBuilder.Append("\" => ");
             switchBuilder.Append(i);
@@ -303,13 +245,13 @@ public static class ExtensibleGenerator
         public partial class {{extensionName}} : DynamicReflectiveExtension
         {
         
-        protected override int GetMethodNumber(MethodInfo method) {
-            return method.Name switch
-            {
+            protected override int GetMethodNumber(MethodInfo method) {
+                return method.Name switch
+                {
         {{switchBuilder}}
-                _ => -1
-            };
-        }
+                    _ => -1
+                };
+            }
         
         {{methodBuilder}}
         }               

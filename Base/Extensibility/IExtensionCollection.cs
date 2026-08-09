@@ -1,12 +1,12 @@
 ﻿namespace Base.Extensibility;
 
-public interface IExtensionCollection<T, TMethodIndentifier> where T : IExtension<TMethodIndentifier>
+public interface IExtensionCollection<T, TMethodIdentifier> where T : IExtension<TMethodIdentifier>
 {
     int BaseState { get; }
     
     void Add(T extension);
 
-    T? Next(int state, TMethodIndentifier methodIndentifier);
+    T? Next(int state, TMethodIdentifier methodIndentifier);
 }
 
 public class ListExtensionCollection<T> : List<T>, IExtensionCollection<T, int> where T : class, IExtension<int>

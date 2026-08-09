@@ -16,8 +16,8 @@ public class ExtensibilityTests
         Assert.That(car.Gear, Is.EqualTo(2));
         Assert.That(car.ChangeGear(6), Is.True);
         Assert.That(car.Gear, Is.EqualTo(6));
-        
-        var collection = new CarExtensionExtensionCollection();
+
+        var collection = new ListExtensionCollection<CarExtension>();
         car.SetExtensionCollection(collection);
         
         Assert.That(car.ChangeGear(3), Is.True);
@@ -38,7 +38,7 @@ public class ExtensibilityTests
         var car = new Car();
         Assert.Throws<MissingBehaviorException>(() => car.Fly(10));
 
-        var collection = new CarExtensionExtensionCollection();
+        var collection = new ListExtensionCollection<CarExtension>();
         car.SetExtensionCollection(collection);
         Assert.Throws<MissingBehaviorException>(() => car.Fly(10));
         
