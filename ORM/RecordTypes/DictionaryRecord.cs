@@ -10,5 +10,5 @@ public class DictionaryRecord : DictionaryFieldCollection, IRecord
         Set(name, value);
     }
 
-    public IModel GetModel() => null!; //TODO
+    public IModel? GetModel() => null;
 }

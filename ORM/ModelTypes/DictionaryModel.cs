@@ -9,6 +9,9 @@ public class DictionaryModel : Model
     private readonly IFieldDefinition _primaryKey;
 
     public DictionaryModel(string name, IFieldDefinition primaryKey, params IFieldDefinition[] fields)
+        : this(name, primaryKey, (IEnumerable<IFieldDefinition>)fields) {}
+
+    public DictionaryModel(string name, IFieldDefinition primaryKey, IEnumerable<IFieldDefinition> fields)
     {
         Name = name;
         

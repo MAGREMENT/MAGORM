@@ -25,15 +25,21 @@ public static class ModelDefinitionGenerator //TODO
         if (symbol is null) return;
 
         var builder = new StringBuilder();
-        var properties = GeneratorHelper.GetAllPropertiesWithAttribute(symbol, ModelFieldAttributeFullName);
         var sourceHeader = $$"""
         using ORM.Abstract;
+        using ORM.RecordTypes;
         
         namespace {{symbol.ContainingNamespace.ToDisplayString()}};
+        
+        public static class {{symbol.Name}}Model {
+        
+            public static IModel Instance = ModelGenerator.Generate(typeof({{symbol.Name}}));
+        
+        }
 
         public partial class {{symbol.Name}} {
 
-            public override IModel GetModel() => null!;
+            public override IModel GetModel() => {{symbol.Name}}Model.Instance;
         
         }
         """;

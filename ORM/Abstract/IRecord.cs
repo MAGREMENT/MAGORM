@@ -3,11 +3,15 @@ using Base.Fields;
 
 namespace ORM.Abstract;
 
+/**
+ * A record implementation needs to have a constructor with no arguments and no side effect as record instances
+ * will be instantiated by the framework
+ */
 public interface IRecord : IFieldCollection
 {
     void Init(string name, object? value);
 
-    IModel GetModel();
+    IModel? GetModel();
 }
 
 public static class RecordExtensions
