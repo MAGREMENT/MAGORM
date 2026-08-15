@@ -48,7 +48,7 @@ public abstract class FieldDefinition : IFieldDefinition
 
 public record ModelReference(string Model, string Field)
 {
-    public static ModelReference None = new(string.Empty, string.Empty);
+    public static readonly ModelReference None = new(string.Empty, string.Empty);
 
     public bool IsNone() => Model.Length == 0;
 }

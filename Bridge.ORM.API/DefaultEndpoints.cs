@@ -34,6 +34,7 @@ public static class EndpointModelExtensions
                         definition.Parameters));
                     break;
             }
+            //TODO others
         }
     }
 }

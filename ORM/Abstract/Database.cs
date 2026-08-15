@@ -10,7 +10,6 @@ public class Database
 {
     private readonly IDatabaseEngine _engine;
     private readonly IModelBank _modelBank;
-    private readonly DirtyCollection _dirty = new();
 
     public Database(IDatabaseEngine engine, IModelBank modelBank)
     {
@@ -30,12 +29,9 @@ public class Database
     }
 
     public IEnumerable<IModel> EnumerateModels() => _modelBank.EnumerateModels();
-
-    public void NoticeDirty(IModel model, IRecord record, string field)
-    {
-        _dirty.AddToDirty(model, record, field);
-    }
-
+    
+    public IModel? GetModel(string name) => _modelBank.GetModel(name);
+    
     public void Sync()
     {
         var currentSpecifications = new Dictionary<string, CreateSpecification>();
@@ -128,7 +124,7 @@ public class Database
         return result;
     }
 
-    internal List<T> SelectRecords<T>(IModel model, QueryCondition? where)
+    public List<T> SelectRecords<T>(IModel model, QueryCondition? where)
         where T : IRecord, new()
     {
         var mf = new SelectTree();
@@ -136,7 +132,7 @@ public class Database
         return SelectRecords<T>(mf, where);
     }
 
-    internal List<T> SelectRecords<T>(IModel model, IReadOnlyList<string> fields, QueryCondition? where)
+    public List<T> SelectRecords<T>(IModel model, IReadOnlyList<string> fields, QueryCondition? where)
         where T : IRecord, new()
     {
         var mf = new SelectTree();
@@ -144,11 +140,51 @@ public class Database
         return SelectRecords<T>(mf, where);
     }
 
+    public void UpdateRecords(IEnumerable<RecordUpdate> changes)
+    {
+        var stacker = _engine.Language.InitQueryBuilder();
+        
+        foreach (var change in changes)
+        {
+            var parameters = new List<object?>();
+            foreach (var fieldName in change.Fields)
+            {
+                var field = change.Model.GetFieldDefinition(fieldName);
+                if (field is null) throw new Exception(); //TODO
+
+                parameters.Add(change.Record.Get(field.Name));
+            }
+            
+            stacker.Update(new UpdateSpecification(change.Model.Name, change.Fields.ToArray()), parameters);
+        }
+
+        _engine.Execute(stacker.ToQueries());
+    }
+
+    public void DeleteRecords(IEnumerable<RecordDelete> deletes)
+    {
+        var stacker = _engine.Language.InitQueryBuilder();
+        foreach (var delete in deletes)
+        {
+            List<QueryCondition> conditions = new();
+            var primary = delete.Model.GetPrimaryKey();
+            foreach (var record in delete.Records)
+            {
+                conditions.Add(new QueryCondition(primary.Name, DBOperator.EQUAL, record.Get(primary.Name)));
+            }
+
+            var (whereSpecification, parameters) = Conditions.Or(conditions).Compile();
+            stacker.Delete(new DeleteSpecification(delete.Model.Name, whereSpecification), parameters);
+        }
+        
+        _engine.Execute(stacker.ToQueries());
+    }
+
     private List<T> SelectRecords<T>(SelectTree tree, QueryCondition? where)
         where T : IRecord, new()
     {
         WhereSpecification? whereSpecification;
-        IReadOnlyList<object> parameters;
+        IReadOnlyList<object?> parameters;
         List<string> tempTables = [];
         if (where is null)
         {
@@ -196,8 +232,6 @@ public class Database
         return _engine.ExecuteResult<List<T>>(queryResult => CreateRecordsFromQueryResult<T>(queryResult,
                 modelsInDependencyOrder, tree), stacker.ToQueries());
     }
-    
-    public IModel? GetModel(string name) => _modelBank.GetModel(name);
     
     private static List<T> CreateRecordsFromQueryResult<T>(IQueryResult queryResult,
         IReadOnlyList<IModel> modelsInOrder, SelectTree tree)
@@ -260,30 +294,9 @@ public class Database
     }
 }
 
-public record RecordChange(IRecord Record, HashSet<string> Fields);
+public record RecordUpdate(IModel Model, IRecord Record, IEnumerable<string> Fields);
 
-public class DirtyCollection : Dictionary<string, Dictionary<object, RecordChange>>
-{
-    public void AddToDirty(IModel model, IRecord record, string field)
-    {
-        if (!TryGetValue(model.Name, out var dic))
-        {
-            dic = new Dictionary<object, RecordChange>();
-            this[model.Name] = dic;
-        }
-
-        if (!record.TryGet(model.GetPrimaryKey().Name, out var pk) || pk is null)
-            throw new Exception("No primary key");
-        
-        if(!dic.TryGetValue(pk, out var change))
-        {
-            change = new RecordChange(record, new HashSet<string>());
-            dic[pk] = change;
-        }
-
-        change.Fields.Add(field);
-    }
-}
+public record RecordDelete(IModel Model, IEnumerable<IRecord> Records);
 
 //TODO test if UniqueList is better
 public class SelectTreeModelInfo

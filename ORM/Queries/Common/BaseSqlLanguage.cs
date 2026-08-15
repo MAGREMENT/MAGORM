@@ -142,6 +142,13 @@ public abstract class BaseSqlLanguage : ISqlLanguage
         }
     }
 
+    public void Delete(StringBuilder builder, ref int paramCount, DeleteSpecification specification)
+    {
+        builder.Append("DELETE FROM ");
+        builder.Append(specification.Model);
+        if (specification.Where is not null) Where(builder, ref paramCount, specification.Where);
+    }
+
     public void Drop(StringBuilder builder, ref int paramCount, string name)
     {
         builder.Append("DROP TABLE ");

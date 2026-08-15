@@ -26,21 +26,21 @@ public static class Conditions
     }
 }
 
-public record QueryCondition(object Left, DBOperator Operator, object Right)
+public record QueryCondition(object? Left, DBOperator Operator, object? Right)
 {
-    public (WhereSpecification, IReadOnlyList<object>) Compile()
+    public (WhereSpecification, IReadOnlyList<object?>) Compile()
     {
-        var parameters = new List<object>();
+        var parameters = new List<object?>();
         var spec = Compile(parameters);
         return (spec, parameters);
     }
 
-    private WhereSpecification Compile(List<object> parameters)
+    private WhereSpecification Compile(List<object?> parameters)
     {
         return new WhereSpecification(GetArgument(Left, parameters), Operator, GetArgument(Right, parameters));
     }
 
-    private WhereArgument GetArgument(object obj, List<object> parameters)
+    private WhereArgument GetArgument(object? obj, List<object?> parameters)
     {
         switch (obj)
         {

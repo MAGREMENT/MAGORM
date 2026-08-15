@@ -1,39 +1,9 @@
-﻿using Base;
-using Base.Fields;
-using ORM.Queries.Specifications;
+﻿using Base.Fields;
+using ORM.Abstract;
 
-namespace ORM.Abstract;
+namespace ORM.ModelTypes;
 
-public interface IModel : INamed, IAttachable<Database>
-{
-    void NoticeDirty(IRecord record, string field);
-    
-    void Add(IFieldDefinition field);
-    
-    IReadOnlyList<string> GetAllAutoIncrementFieldsName();
-    
-    IReadOnlyList<IFieldDefinition> GetAllAutoIncrementFields();
-    
-    CreateSpecification GenerateSpecification();
-    
-    public IFieldDefinition GetPrimaryKey();
-    
-    public IFieldDefinition? GetFieldDefinition(string name);
-    
-    public IFieldDefinition? GetFieldDefinition(ReadOnlySpan<char> name);
-    
-    public IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
-
-    public T Create<T>(IReadOnlyKeyValue<string, object?> values) where T : IRecord, new();
-
-    public T[] Create<T>(params IReadOnlyKeyValue<string, object?>[] values) where T : IRecord, new();
-
-    public List<T> Select<T>(QueryCondition? condition = null, params string[] fields) where T : IRecord, new();
-
-    public IRecord InstantiateRecord();
-}
-
-public abstract class Model : IModel
+public abstract class BufferedModel : IModel
 {
     private readonly List<string> _allFieldsName = new();
     private readonly List<string> _allAutoIncrementFieldsName = new();
@@ -56,11 +26,6 @@ public abstract class Model : IModel
         foreach(var field in AllFieldDefinitions) field.Detach(obj);
     }
 
-    public void NoticeDirty(IRecord record, string field)
-    {
-        _database?.NoticeDirty(this, record, field);
-    }
-
     public virtual void Add(IFieldDefinition field)
     {
         _allFieldsName.Add(field.Name);
@@ -76,29 +41,6 @@ public abstract class Model : IModel
     public IReadOnlyList<string> GetAllAutoIncrementFieldsName() => _allAutoIncrementFieldsName;
     
     public IReadOnlyList<IFieldDefinition> GetAllAutoIncrementFields() => _allAutoIncrementFields;
-    
-    public CreateSpecification GenerateSpecification()
-    {
-        var fieldSpecifications = new FieldSpecification[AllFieldDefinitions.Count];
-        var fkSpecifications = new List<ForeignKeySpecification>();
-
-        var i = 0;
-        foreach(var f in AllFieldDefinitions)
-        {
-            fieldSpecifications[i++] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
-                f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
-
-            if (f.References is not null)
-            {
-                fkSpecifications.Add(new ForeignKeySpecification(f.Name, f.References.Model, f.References.Field));
-            }
-        }
-
-        return new CreateSpecification(Name,
-            fieldSpecifications,
-            new PrimaryKeySpecification(GetPrimaryKey().Name),
-            fkSpecifications);
-    }
     
     public abstract IFieldDefinition GetPrimaryKey();
 
@@ -133,7 +75,7 @@ public abstract class Model : IModel
 
     public override bool Equals(object? obj)
     {
-        return obj is Model m && m.Name == Name;
+        return obj is BufferedModel m && m.Name == Name;
     }
 
     public override int GetHashCode()

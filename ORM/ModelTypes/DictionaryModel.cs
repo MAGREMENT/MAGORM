@@ -3,7 +3,7 @@ using ORM.RecordTypes;
 
 namespace ORM.ModelTypes;
 
-public class DictionaryModel : Model
+public class DictionaryModel : BufferedModel
 {
     private readonly Dictionary<string, IFieldDefinition> _dic = new();
     private readonly IFieldDefinition _primaryKey;

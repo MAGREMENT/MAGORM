@@ -16,6 +16,8 @@ public interface ISqlLanguage
 
     void Select(StringBuilder builder, ref int paramCount, SelectSpecification specification);
 
+    void Delete(StringBuilder builder, ref int paramCount, DeleteSpecification specification);
+
     void Drop(StringBuilder builder, ref int paramCount, string name);
 
     bool IsSameDBFieldType(DBFieldType left, DBFieldType right);
@@ -29,4 +31,7 @@ public record InsertSpecification(string Model,
 
 public record UpdateSpecification(string Model,
     IReadOnlyList<string> Fields,
-    WhereSpecification? Where);
+    WhereSpecification? Where = null);
+    
+public record DeleteSpecification(string Model,
+    WhereSpecification? Where = null);

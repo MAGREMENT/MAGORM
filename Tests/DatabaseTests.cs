@@ -2,7 +2,6 @@
 using ORM;
 using ORM.Abstract;
 using ORM.Languages;
-using ORM.Languages.SQLite;
 using ORM.RecordTypes;
 using ORM.SQLite.Microsoft;
 using MissingFieldException = ORM.Abstract.MissingFieldException;
@@ -82,6 +81,20 @@ public class DatabaseTests
             r2Selected = m2.Select<DictionaryRecord>(null, "Author.Name");
             Assert.That(r2Selected[0].Get("Author") is IRecord, Is.True);
             Assert.That(r2Selected[0]._<IRecord>("Author").Get("Name"), Is.EqualTo(r1.Get("Name")));
+
+            r2.Set("PageCount", 12);
+            r2Selected = m2.Select<DictionaryRecord>(null, "PageCount");
+            Assert.That(r2.Get("PageCount"), Is.EqualTo(12));
+            //Not yet updated
+            Assert.That(r2Selected[0].Get("PageCount"), Is.EqualTo(8));
+            
+            db.UpdateRecords([new RecordUpdate(m2, r2, ["PageCount"])]);
+            r2Selected = m2.Select<DictionaryRecord>(null, "PageCount");
+            Assert.That(r2Selected[0].Get("PageCount"), Is.EqualTo(12));
+            
+            db.DeleteRecords([new RecordDelete(m2, [r2])]);
+            r2Selected = m2.Select<DictionaryRecord>();
+            Assert.That(r2Selected, Has.Count.EqualTo(0));
         }
     }
 

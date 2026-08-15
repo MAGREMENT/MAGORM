@@ -12,8 +12,39 @@ public abstract class PropertyRecord : PropertyFieldCollection, IRecord
     public abstract IModel GetModel();
 }
 
-//TODO maybe separate those two concepts ? Can be a Model Definition without being a PropertyFieldCollection
-public class ModelDefinitionAttribute : PropertyFieldCollectionAttribute;
+public abstract class ModelDefiner
+{
+    public abstract IModel GetModel();
+}
+
+[AttributeUsage(AttributeTargets.Class)]
+public class ModelDefinitionAttribute : Attribute
+{
+    public GenerateModel Generator { get; }
+    
+    public ModelDefinitionAttribute(Type declaringType, string methodName)
+    {
+        var method = declaringType.GetMethod(methodName);
+
+        if (method == null) throw new Exception("Generator method not found");
+
+        Generator = (GenerateModel)Delegate.CreateDelegate(typeof(GenerateModel), method);
+    }
+}
+
+public delegate IModel GenerateModel(Type type);
+
+public static class ModelGenerator
+{
+    public static IModel Generate(Type type)
+    {
+        var (primary, definitions) = ModelField.GetFields(type);
+        if (primary is null) throw new Exception("Need primary key");
+        
+        var result = new DictionaryModel(type.Name, primary, definitions);
+        return result;
+    }
+}
 
 public class ModelFieldAttribute : FieldAttribute
 {
@@ -51,17 +82,5 @@ public static class ModelField
         }
 
         return (primary, definitions);
-    }
-}
-
-public static class ModelGenerator
-{
-    public static IModel Generate(Type type)
-    {
-        var (primary, definitions) = ModelField.GetFields(type);
-        if (primary is null) throw new Exception("Need primary key");
-        
-        var result = new DictionaryModel(type.Name, primary, definitions);
-        return result;
     }
 }

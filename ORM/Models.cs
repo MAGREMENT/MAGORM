@@ -12,6 +12,6 @@ public static class Models
         Unique = true
     });
 
-    public static Model DefineBase(string name, params IFieldDefinition[] fields)
+    public static BufferedModel DefineBase(string name, params IFieldDefinition[] fields)
         => new DictionaryModel(name, BasePrimaryKey, fields);
 }

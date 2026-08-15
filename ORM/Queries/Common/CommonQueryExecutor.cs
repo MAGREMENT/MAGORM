@@ -57,6 +57,8 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
 
     public TResult ExecuteResult<TResult>(OnQueryResult<TResult> onResult, Query[] queries)
     {
+        if (queries.Length == 1) return ExecuteResult(onResult, queries[0]);
+        
         var con = CreateConnection();
         con.Open();
         

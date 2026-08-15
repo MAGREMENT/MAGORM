@@ -14,8 +14,8 @@ public class PropertyRecordTests
     }
 }
 
-[ModelDefinition]
-public partial class Book : PropertyRecord
+[ModelDefinition(typeof(ModelGenerator), nameof(ModelGenerator.Generate))]
+public partial class Book : ModelDefiner
 {
     [ModelField(Primary = true, AutoIncrement = true)]
     public int Id { get; set; }

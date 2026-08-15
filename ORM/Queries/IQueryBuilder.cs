@@ -5,15 +5,17 @@ namespace ORM.Queries;
 
 public interface IQueryBuilder
 {
-    void Insert(InsertSpecification spec, IEnumerable<object>? parameters = null);
+    void Insert(InsertSpecification spec, IEnumerable<object?>? parameters = null);
     
-    void Create(CreateSpecification spec, IEnumerable<object>? parameters = null);
+    void Create(CreateSpecification spec, IEnumerable<object?>? parameters = null);
 
-    void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object>? parameters = null);
+    void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object?>? parameters = null);
     
-    void Update(UpdateSpecification spec, IEnumerable<object>? parameters = null);
+    void Update(UpdateSpecification spec, IEnumerable<object?>? parameters = null);
     
-    void Select(SelectSpecification spec, IEnumerable<object>? parameters = null);
+    void Select(SelectSpecification spec, IEnumerable<object?>? parameters = null);
+
+    void Delete(DeleteSpecification spec, IEnumerable<object?>? parameters = null);
 
     void Drop(string name);
 
@@ -28,7 +30,7 @@ public class StackingQueryBuilder : IQueryBuilder
 {
     private readonly StringBuilder _builder = new();
     private int _paramCount;
-    private readonly List<object> _parameters = new();
+    private readonly List<object?> _parameters = new();
     private readonly ISqlLanguage _language;
 
     public StackingQueryBuilder(ISqlLanguage language)
@@ -36,34 +38,40 @@ public class StackingQueryBuilder : IQueryBuilder
         _language = language;
     }
 
-    public void Insert(InsertSpecification spec, IEnumerable<object>? parameters = null)
+    public void Insert(InsertSpecification spec, IEnumerable<object?>? parameters = null)
     {
         BeforeLanguageCall(parameters);
         _language.Insert(_builder, ref _paramCount, spec);
     }
 
-    public void Create(CreateSpecification spec, IEnumerable<object>? parameters = null)
+    public void Create(CreateSpecification spec, IEnumerable<object?>? parameters = null)
     {
         BeforeLanguageCall(parameters);
         _language.Create(_builder, ref _paramCount, spec);
     }
 
-    public void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object>? parameters = null)
+    public void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object?>? parameters = null)
     {
         BeforeLanguageCall(parameters);
         _language.CreateFromSelect(_builder, ref _paramCount, spec);
     }
 
-    public void Update(UpdateSpecification spec, IEnumerable<object>? parameters = null)
+    public void Update(UpdateSpecification spec, IEnumerable<object?>? parameters = null)
     {
         BeforeLanguageCall(parameters);
         _language.Update(_builder, ref _paramCount, spec);
     }
 
-    public void Select(SelectSpecification spec, IEnumerable<object>? parameters = null)
+    public void Select(SelectSpecification spec, IEnumerable<object?>? parameters = null)
     {
         BeforeLanguageCall(parameters);
         _language.Select(_builder, ref _paramCount, spec);
+    }
+
+    public void Delete(DeleteSpecification spec, IEnumerable<object?>? parameters = null)
+    {
+        BeforeLanguageCall(parameters);
+        _language.Delete(_builder, ref _paramCount, spec);
     }
 
     public void Drop(string name)
@@ -88,7 +96,7 @@ public class StackingQueryBuilder : IQueryBuilder
         _paramCount = 0;
     }
     
-    private void BeforeLanguageCall(IEnumerable<object>? parameters)
+    private void BeforeLanguageCall(IEnumerable<object?>? parameters)
     {
         if (parameters is not null) _parameters.AddRange(parameters);
         if (_builder.Length > 0) _builder.Append(";\n\n");
@@ -106,41 +114,48 @@ public class DividedQueriesBuilder : IQueryBuilder
         _language = language;
     }
 
-    public void Insert(InsertSpecification spec, IEnumerable<object>? parameters = null)
+    public void Insert(InsertSpecification spec, IEnumerable<object?>? parameters = null)
     {
         var paramCount = 0;
         _language.Insert(_builder, ref paramCount, spec);
         AfterLanguageCall(paramCount, parameters);
     }
 
-    public void Create(CreateSpecification spec, IEnumerable<object>? parameters = null)
+    public void Create(CreateSpecification spec, IEnumerable<object?>? parameters = null)
     {
         var paramCount = 0;
         _language.Create(_builder, ref paramCount, spec);
         AfterLanguageCall(paramCount, parameters);
     }
 
-    public void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object>? parameters = null)
+    public void CreateFromSelect(CreateFromSelectSpecification spec, IEnumerable<object?>? parameters = null)
     {
         var paramCount = 0;
         _language.CreateFromSelect(_builder, ref paramCount, spec);
         AfterLanguageCall(paramCount, parameters);
     }
 
-    public void Update(UpdateSpecification spec, IEnumerable<object>? parameters = null)
+    public void Update(UpdateSpecification spec, IEnumerable<object?>? parameters = null)
     {
         var paramCount = 0;
         _language.Update(_builder, ref paramCount, spec);
         AfterLanguageCall(paramCount, parameters);
     }
 
-    public void Select(SelectSpecification spec, IEnumerable<object>? parameters = null)
+    public void Select(SelectSpecification spec, IEnumerable<object?>? parameters = null)
     {
         var paramCount = 0;
         _language.Select(_builder, ref paramCount, spec);
         AfterLanguageCall(paramCount, parameters);
     }
-    
+
+    public void Delete(DeleteSpecification spec, IEnumerable<object?>? parameters = null)
+    {
+        var paramCount = 0;
+        _language.Delete(_builder, ref paramCount, spec);
+        AfterLanguageCall(paramCount, parameters);
+    }
+
     public void Drop(string name)
     {
         var paramCount = 0;
@@ -163,7 +178,7 @@ public class DividedQueriesBuilder : IQueryBuilder
         _builder.Clear();
     }
 
-    private void AfterLanguageCall(int paramCount, IEnumerable<object>? parameters)
+    private void AfterLanguageCall(int paramCount, IEnumerable<object?>? parameters)
     {
         var paramArray = parameters is null ? [] : parameters.ToArray();
         if (paramArray.Length != paramCount) throw new Exception(); //TODO

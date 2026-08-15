@@ -125,43 +125,11 @@ public class WebApplicationApi : IApi
         return er.Type switch
         {
             EndpointResultType.File => Results.File((string)er.Value,
-                GetContentType(Path.GetExtension((string)er.Value))),
+                ApiHelper.ExtensionToContentType(Path.GetExtension((string)er.Value))),
             EndpointResultType.Json => Results.Json(er.Value),
             EndpointResultType.NotFound => Results.NotFound(),
             EndpointResultType.BadRequest => Results.BadRequest(er.Value),
             EndpointResultType.Content => Results.Content((string)er.Value, "text/html") //TODO
-        };
-    }
-
-    private static string GetContentType(string extension)
-    {
-        return extension switch
-        {
-            ".html" or ".htm" => "text/html",
-            ".css"            => "text/css",
-            ".js"             => "application/javascript",
-            ".json"           => "application/json",
-            ".xml"            => "application/xml",
-            ".txt"             => "text/plain",
-
-            ".pdf"             => "application/pdf",
-
-            ".png"             => "image/png",
-            ".jpg" or ".jpeg"  => "image/jpeg",
-            ".gif"             => "image/gif",
-            ".svg"             => "image/svg+xml",
-            ".webp"            => "image/webp",
-            ".ico"             => "image/x-icon",
-
-            ".mp3"             => "audio/mpeg",
-            ".wav"             => "audio/wav",
-            ".mp4"             => "video/mp4",
-            ".webm"            => "video/webm",
-
-            ".zip"             => "application/zip",
-            ".csv"             => "text/csv",
-
-            _                  => "application/octet-stream"
         };
     }
 }
