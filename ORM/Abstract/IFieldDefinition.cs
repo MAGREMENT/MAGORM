@@ -1,34 +1,44 @@
 ﻿using Base;
+using ORM.ModelTypes;
+using ORM.Queries.Specifications;
 
 namespace ORM.Abstract;
 
-public interface IFieldDefinition : INamed, IAttachable<Database>
+public interface IFieldDefinition : INamed, IAttachable<IReadOnlyModelBank>, ISelectFieldSpecification
 {
     public FieldDefinitionsOptions Options { get; }
 
     public DBFieldType GetDBFieldType();
     
-    public ModelReference? References { get; }
+    public ModelReference? Reference { get; }
     
     //TODO divide into CheckValueValidity and ComputeValue
-    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord; 
+    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord;
+
+    public object? ToDbValue(object? recordValue);
 }
 
 public abstract class FieldDefinition : IFieldDefinition
 {
     public abstract string Name { get; }
 
-    public abstract void Attach(Database obj);
+    public abstract void Attach(IReadOnlyModelBank obj);
 
-    public abstract void Detach(Database obj);
+    public abstract void Detach(IReadOnlyModelBank obj);
 
     public abstract FieldDefinitionsOptions Options { get; }
 
     public abstract DBFieldType GetDBFieldType();
 
-    public abstract ModelReference? References { get; }
+    public abstract ModelReference? Reference { get; }
 
     public abstract bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord;
+    
+    public abstract object? ToDbValue(object? recordValue);
+
+    public string? Alias => null;
+
+    public bool IsTableColumn => true;
 
     public override bool Equals(object? obj)
     {
@@ -46,12 +56,7 @@ public abstract class FieldDefinition : IFieldDefinition
     }
 }
 
-public record ModelReference(string Model, string Field)
-{
-    public static readonly ModelReference None = new(string.Empty, string.Empty);
-
-    public bool IsNone() => Model.Length == 0;
-}
+public record ModelReference(IModel Model, IFieldDefinition Field);
 
 public record FieldDefinitionsOptions(
     bool Required = false,

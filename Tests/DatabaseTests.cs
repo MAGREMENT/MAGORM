@@ -1,5 +1,4 @@
-﻿using Base.Fields;
-using ORM;
+﻿using ORM;
 using ORM.Abstract;
 using ORM.Languages;
 using ORM.RecordTypes;
@@ -60,12 +59,12 @@ public class DatabaseTests
             db.AddModels(m2);
             db.Sync();
 
-            var r1 = m1.Create<DictionaryRecord>(new KeyValueDictionary
+            var r1 = db.InsertRecord(m1, new DictionaryRecord
             {
                 {"Name", "Some Author"}
             });
 
-            var r2 = m2.Create<DictionaryRecord>(new KeyValueDictionary
+            var r2 = db.InsertRecord(m2, new DictionaryRecord
             {
                 {"Title", "Title Test"},
                 {"PageCount", 8},
@@ -74,32 +73,40 @@ public class DatabaseTests
                 {"Author", r1}
             });
 
-            var r2Selected = m2.Select<DictionaryRecord>();
+            var r2Selected = db.SelectRecords<DictionaryRecord>(m2, null);
             Assert.That(r2Selected, Has.Count.EqualTo(1));
-            Assert.That(r2.AreCommonFieldsEqual(r2Selected[0]));
+            Assert.That(r2Selected[0].GetFieldCount(), Is.EqualTo(6));
+            foreach (var fName in new[] { "Title", "PageCount", "IsProduced", "SerialNumber" })
+            {
+                Assert.That(r2Selected[0].Get(fName), Is.EqualTo(r2.Get(fName)));
+            }
 
-            r2Selected = m2.Select<DictionaryRecord>(null, "Author.Name");
+            var refFieldValue = r2Selected[0].Get("Author");
+            Assert.That(refFieldValue, Is.AssignableTo<IRecord>());
+            Assert.That(((IRecord)refFieldValue).Get("Id"), Is.EqualTo(r1.Get("Id")));
+
+            r2Selected = db.SelectRecords<DictionaryRecord>(m2, ["Author.Name"], null);
             Assert.That(r2Selected[0].Get("Author") is IRecord, Is.True);
             Assert.That(r2Selected[0]._<IRecord>("Author").Get("Name"), Is.EqualTo(r1.Get("Name")));
 
             r2.Set("PageCount", 12);
-            r2Selected = m2.Select<DictionaryRecord>(null, "PageCount");
+            r2Selected = db.SelectRecords<DictionaryRecord>(m2, ["PageCount"], null);
             Assert.That(r2.Get("PageCount"), Is.EqualTo(12));
             //Not yet updated
             Assert.That(r2Selected[0].Get("PageCount"), Is.EqualTo(8));
             
             db.UpdateRecords([new RecordUpdate(m2, r2, ["PageCount"])]);
-            r2Selected = m2.Select<DictionaryRecord>(null, "PageCount");
+            r2Selected = db.SelectRecords<DictionaryRecord>(m2, ["PageCount"], null);
             Assert.That(r2Selected[0].Get("PageCount"), Is.EqualTo(12));
             
             db.DeleteRecords([new RecordDelete(m2, [r2])]);
-            r2Selected = m2.Select<DictionaryRecord>();
+            r2Selected = db.SelectRecords<DictionaryRecord>(m2, null);
             Assert.That(r2Selected, Has.Count.EqualTo(0));
         }
     }
 
     [Test]
-    public void CreateWithEmptyFieldTest()
+    public void InsertWithEmptyFieldTest()
     {
         var m1 = Models.DefineBase("Author",
             Fields.String("Name"));
@@ -116,12 +123,12 @@ public class DatabaseTests
             db.AddModels(m2);
             db.Sync();
 
-            var r1 = m1.Create<DictionaryRecord>(new KeyValueDictionary());
-            var r1Selected = m1.Select<DictionaryRecord>();
-            Assert.That(r1._<string>("Name"), Is.Null);
-            Assert.That(r1Selected[0]._<string>("Name"), Is.Null);
+            var r1 = db.InsertRecord(m1, new DictionaryRecord());
+            var r1Selected = db.SelectRecords<DictionaryRecord>(m1, null);
+            Assert.That(r1Selected[0]._<int>("Id"), Is.EqualTo(r1._<int>("Id")));
+            Assert.That(r1.TryGet("Name", out _), Is.False);
 
-            Assert.Throws<MissingFieldException>(() => m2.Create<DictionaryRecord>(new KeyValueDictionary()));
+            Assert.Throws<MissingFieldException>(() => db.InsertRecord(m2, new DictionaryRecord()));
         }
     }
 }

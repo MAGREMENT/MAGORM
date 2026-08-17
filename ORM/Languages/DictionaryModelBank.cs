@@ -1,4 +1,5 @@
 ﻿using ORM.Abstract;
+using ORM.ModelTypes;
 
 namespace ORM.Languages;
 

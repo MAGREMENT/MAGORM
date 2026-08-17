@@ -1,8 +1,14 @@
-﻿namespace ORM.Abstract;
+﻿using ORM.ModelTypes;
 
-public interface IModelBank
+namespace ORM.Abstract;
+
+public interface IReadOnlyModelBank
 {
     IModel? GetModel(string name);
-    void AddModels(IEnumerable<IModel> models);
     IEnumerable<IModel> EnumerateModels();
+}
+
+public interface IModelBank : IReadOnlyModelBank
+{
+    void AddModels(IEnumerable<IModel> models);
 }

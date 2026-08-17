@@ -1,4 +1,5 @@
-﻿using ORM.Queries;
+﻿using ORM.ModelTypes;
+using ORM.Queries;
 
 namespace ORM.Abstract;
 

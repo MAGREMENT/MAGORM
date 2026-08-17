@@ -6,30 +6,39 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
     string? otherModelField = null) 
     : FieldDefinition
 {
-    private IFieldDefinition? _referencedField;
-    private ModelReference? _modelReference;
+    private ModelReference? _reference;
 
     public override string Name { get; } = name;
     public override FieldDefinitionsOptions Options { get; } = options with { AutoIncrement = false};
-    public override ModelReference? References => _modelReference;
+    public override ModelReference? Reference => _reference;
 
     public override DBFieldType GetDBFieldType()
     {
-        if (_referencedField is null) throw new ArgumentException(); //TODO
+        if (_reference is null) throw new ArgumentException(); //TODO
         
-        return _referencedField.GetDBFieldType();
+        return _reference.Field.GetDBFieldType();
     }
 
     public override bool TryComputeValue<T>(object? value, T record, out object? result)
     {
-        if (_referencedField is null) throw new ArgumentException(); //TODO
+        if (_reference is null) throw new ArgumentException(); //TODO
 
-        if (value is IRecord otherRecord) value = otherRecord.Get(_referencedField.Name);
-        return _referencedField.TryComputeValue(value, record, out result);
+        if (value is IRecord otherRecord) value = otherRecord.Get(_reference.Field.Name);
+        return _reference.Field.TryComputeValue(value, record, out result);
     }
 
-    public override void Attach(Database obj)
+    public override object? ToDbValue(object? recordValue)
     {
+        if (_reference is null) throw new ArgumentException(); //TODO
+        if (recordValue is not IRecord otherRecord) throw new ArgumentException(); //TODO
+        
+        return otherRecord.Get(_reference.Field.Name);
+    }
+
+    public override void Attach(IReadOnlyModelBank obj)
+    {
+        if (_reference is not null) throw new Exception("Field already attached");
+        
         var otherModel = obj.GetModel(_otherModelName);
         if (otherModel is null) throw new ArgumentException(); //TODO
 
@@ -38,14 +47,12 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
             : otherModel.GetFieldDefinition(otherModelField);
 
         if (field is null) throw new ArgumentException(); //TODO
-
-        _referencedField = field;
-        _modelReference = new ModelReference(otherModel.Name, field.Name);
+        
+        _reference = new ModelReference(otherModel, field);
     }
 
-    public override void Detach(Database obj)
+    public override void Detach(IReadOnlyModelBank obj)
     {
-        _referencedField = null;
-        _modelReference = null;
+        _reference = null;
     }
 }

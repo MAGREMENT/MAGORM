@@ -28,7 +28,7 @@ public static class Conditions
 
 public record QueryCondition(object? Left, DBOperator Operator, object? Right)
 {
-    public (WhereSpecification, IReadOnlyList<object?>) Compile()
+    public (WhereSpecification, List<object?>) Compile()
     {
         var parameters = new List<object?>();
         var spec = Compile(parameters);

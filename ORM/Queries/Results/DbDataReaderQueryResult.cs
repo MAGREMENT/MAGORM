@@ -109,7 +109,7 @@ public class MultiDbDataReaderQueryResult : IQueryResult
         while (_currIndex < _commands.Length - 1)
         {
             _currReader = _commands[++_currIndex].ExecuteReader();
-            if (_currReader.HasRows) return;
+            if (_currReader.FieldCount > 0) return;
             
             _currReader.Dispose();
         }

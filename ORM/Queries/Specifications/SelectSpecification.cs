@@ -7,10 +7,18 @@ public enum OrderByType
 
 public record OrderBySpecification(string Field, OrderByType Type);
 
-public record TemporaryTableSpecification(string Name, bool IsSelected);
+public interface ISelectFieldSpecification
+{
+    string? Alias { get; }
+    bool IsTableColumn { get; }
+
+    public static readonly IEnumerable<ISelectFieldSpecification>? Star = null;
+}
+
+public record SelectFieldSpecification(string? Alias, bool IsTableColumn) : ISelectFieldSpecification;
 
 public record SelectSpecification(string Model,
-    IEnumerable<string> Fields,
+    IEnumerable<ISelectFieldSpecification>? Fields,
     WhereSpecification? Where = null,
     OrderBySpecification[]? OrderBy = null);
     

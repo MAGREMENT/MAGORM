@@ -1,4 +1,6 @@
-﻿namespace ORM.Abstract;
+﻿using ORM.ModelTypes;
+
+namespace ORM.Abstract;
 
 //TODO cached database
 public interface IRecordCache

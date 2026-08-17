@@ -115,14 +115,25 @@ public abstract class BaseSqlLanguage : ISqlLanguage
     public void Select(StringBuilder builder, ref int paramCount, SelectSpecification specification)
     {
         builder.Append("SELECT ");
-        
-        var isFirst = true;
-        foreach (var field in specification.Fields)
+
+        if (specification.Fields is null) builder.Append('*');
+        else
         {
-            if (isFirst) isFirst = false;
-            else builder.Append(", ");
-                
-            builder.Append(field);
+            var isFirst = true;
+            foreach (var field in specification.Fields)
+            {
+                if (isFirst) isFirst = false;
+                else builder.Append(", ");
+
+                if (field.IsTableColumn) builder.Append(field);
+                else builder.Append(GetParameter(paramCount++));
+
+                if (field.Alias is not null)
+                {
+                    builder.Append(" AS ");
+                    builder.Append(field.Alias);
+                }
+            }
         }
 
         builder.Append($"\nFROM {specification.Model}");

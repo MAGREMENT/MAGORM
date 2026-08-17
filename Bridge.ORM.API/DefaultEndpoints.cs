@@ -1,6 +1,7 @@
 ﻿using API;
 using Base.Fields;
 using ORM.Abstract;
+using ORM.ModelTypes;
 using ORM.RecordTypes;
 
 namespace Bridge.ORM.API;
@@ -25,7 +26,7 @@ public static class EndpointModelExtensions
     {
         foreach (var definition in definitions)
         {
-            switch (definition.Operation)
+            /*TODO with service switch (definition.Operation)
             {
                 case DefaultEndpointOperations.CREATE:
                     definer.DefineEndpoint(new Endpoint(EndpointType.POST, "/" + model.Name.ToLower() + "/create", 
@@ -33,7 +34,7 @@ public static class EndpointModelExtensions
                             => new EndpointResult(EndpointResultType.Json, model.Create<DictionaryRecord>(values)),
                         definition.Parameters));
                     break;
-            }
+            }*/
             //TODO others
         }
     }

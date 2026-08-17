@@ -1,6 +1,7 @@
 ﻿using Base;
 using Base.Dependency;
 using Base.Fields;
+using ORM.ModelTypes;
 using ORM.Queries;
 using ORM.Queries.Specifications;
 
@@ -24,7 +25,7 @@ public class Database
         _modelBank.AddModels(models);
         foreach (var model in models)
         {
-            model.Attach(this);
+            model.Attach(_modelBank);
         }
     }
 
@@ -62,73 +63,62 @@ public class Database
 
     public void Nuke()
     {
+        //TODO do something else like : check if language has a drop all tables cmd. If no, get schema and drop tables one by one
         _engine.DropAllTables();
     }
 
-    public TRecord[] CreateRecords<TRecord>(IModel model, params IReadOnlyKeyValue<string, object?>[] values)
-        where TRecord : IRecord, new()
+    public IEnumerable<TRecord> InsertRecords<TRecord>(IModel model, IEnumerable<TRecord> records) where TRecord : IRecord
     {
-        var result = new TRecord[values.Length];
         var stacker = _engine.Language.InitQueryBuilder();
+        var parameters = new List<object?>();
         var fieldNames = new List<string>();
-        var fields = model.AllFieldDefinitions;
-        var parameters = new List<object>();
-        
-        for(int i = 0; i < values.Length; i++)
+
+        foreach (var record in records)
         {
             parameters.Clear();
-            var val = values[i];
-
-            var record = new TRecord();
-            result[i] = record;
-            
-            foreach (var field in fields)
+            fieldNames.Clear();
+            foreach (var field in model.AllFieldDefinitions)
             {
-                if (!val.TryGet(field.Name, out var v))
-                {
-                    if(field.Options.AutoIncrement) continue;
-                    if (field.Options.Required) throw new MissingFieldException(field);
-                }
+                if (field.Options.AutoIncrement) continue;
                 
-                if (!field.TryComputeValue(v, record, out var r)) throw new Exception(); //TODO
-                    
+                if ((!record.TryGet(field.Name, out var v) || v is null) &&
+                    field.Options.Required) throw new MissingFieldException(field);
+                
                 fieldNames.Add(field.Name);
-                record.Init(field.Name, r);
-                parameters.Add(r!);
+                parameters.Add(field.ToDbValue(v));
             }
             
             stacker.Insert(new InsertSpecification(model.Name, fieldNames.ToArray(),
-                    model.GetAllAutoIncrementFieldsName()), parameters);
+                model.GetAllAutoIncrementFieldsName()), parameters.ToArray());
         }
-
-        var transaction = _engine.CreateTransaction();
-        transaction.ExecuteResult(queryResult =>
+        
+        _engine.ExecuteResult(queryResult =>
         {
-            var index = 0;
-            do
+            using var enumerator = records.GetEnumerator();
+            while(queryResult.Next())
             {
-                queryResult.Next();
+                enumerator.MoveNext();
+                var record = enumerator.Current;
+                
                 foreach (var field in model.GetAllAutoIncrementFields())
                 {
                     var objValue = queryResult.TryGet(field.Name, out var v) ? v : null;
-                    if (!field.TryComputeValue(objValue, result[index], out var value)) throw new Exception(); //TODO
+                    if (!field.TryComputeValue(objValue, record, out var value)) throw new Exception(); //TODO
 
-                    result[index].Init(field.Name, value);
+                    record.Init(field.Name, value);
                 }
-            } while (queryResult.NextResultSet());
+            }
 
             return true;
         }, stacker.ToQueries());
-        transaction.Commit();
-        
-        return result;
+        return records;
     }
 
     public List<T> SelectRecords<T>(IModel model, QueryCondition? where)
         where T : IRecord, new()
     {
         var mf = new SelectTree();
-        mf.AddModelFields(model, ModelReference.None, model.AllFieldDefinitions.ToArray());
+        mf.AddModelFields(model, model.AllFieldDefinitions.ToArray());
         return SelectRecords<T>(mf, where);
     }
 
@@ -184,7 +174,7 @@ public class Database
         where T : IRecord, new()
     {
         WhereSpecification? whereSpecification;
-        IReadOnlyList<object?> parameters;
+        List<object?> parameters;
         List<string> tempTables = [];
         if (where is null)
         {
@@ -197,28 +187,29 @@ public class Database
         foreach (var model in modelsInDependencyOrder)
         {
             var info = tree[model];
-            if (info.References.Count == 0)
+            if (info.DependsOn.Count == 0)
             {
                 var tempName = model.Name + "_results";
                 stacker.CreateFromSelect(new CreateFromSelectSpecification(tempName, 
-                    new SelectSpecification(model.Name, info.Fields.EnumerateNames(), whereSpecification,
+                    new SelectSpecification(model.Name, info.Fields, whereSpecification,
                     []), true), parameters);
-                stacker.Select(new SelectSpecification(tempName, info.Fields.EnumerateNames()));
+                stacker.Select(new SelectSpecification(tempName, ISelectFieldSpecification.Star));
                 tempTables.Add(tempName);
             }
             else
             {
-                var modelConditions = new QueryCondition[info.References.Count];
+                var modelConditions = new QueryCondition[info.DependsOn.Count];
                 var pkName = model.GetPrimaryKey().Name; //TODO need to handle situation where pk is not the referenced field
                 var i = 0;
                 var subQueryBuilder = _engine.Language.InitQueryBuilder();
-                foreach (var modelRef in info.References)
+                foreach (var modelRef in info.DependsOn)
                 {
                     subQueryBuilder.Reset();
                     subQueryBuilder.Select(new SelectSpecification(modelRef.Model + "_results", [modelRef.Field]));
                     modelConditions[i++] = new QueryCondition(pkName, DBOperator.IN, subQueryBuilder.ToQuery());
                 }
-                stacker.Select(new SelectSpecification(model.Name, info.Fields.EnumerateNames(), 
+                
+                stacker.Select(new SelectSpecification(model.Name, info.Fields, 
                     Conditions.Or(modelConditions).Compile().Item1, []));
 
             }
@@ -264,12 +255,12 @@ public class Database
                     if (!definition.TryComputeValue(objValue, record, out var value)) throw new Exception(); //TODO
                 
                     record.Init(definition.Name, value);
-                    if (definition.References is not null)
+                    if (definition.Reference is not null)
                     {
-                        if (!needs.TryGetValue((definition.References.Model, value), out needingReferenceList))
+                        if (!needs.TryGetValue((definition.Reference.Model.Name, value), out needingReferenceList))
                         {
                             needingReferenceList = new List<(IRecord, string)>();
-                            needs[(definition.References.Model, value)] = needingReferenceList;
+                            needs[(definition.Reference.Model.Name, value)] = needingReferenceList;
                         }
                         needingReferenceList.Add((record, definition.Name));
                     }
@@ -287,6 +278,8 @@ public class Database
                 }
             }
 
+            if (i == 0 && result.Count == 0) return result;
+            
             i++;
         } while (queryResult.NextResultSet());
 
@@ -301,24 +294,40 @@ public record RecordDelete(IModel Model, IEnumerable<IRecord> Records);
 //TODO test if UniqueList is better
 public class SelectTreeModelInfo
 {
-    public readonly HashSet<ModelReference> References = [];
+    public readonly HashSet<ModelReference> DependsOn = [];
     public readonly HashSet<IFieldDefinition> Fields = [];
 }
 
 public class SelectTree : Dictionary<IModel, SelectTreeModelInfo>, IDependencyCollection<IModel>
 {
-    public void AddModelField(IModel model, ModelReference modelRef, IFieldDefinition field)
+    public IModel? AddModelField(IModel model, IFieldDefinition field)
     {
         var info = GetInfo(model);
-        if(!modelRef.IsNone()) info.References.Add(modelRef);
         info.Fields.Add(field);
+        if (field.Reference is not null)
+        {
+            var referenceInfo = GetInfo(field.Reference.Model);
+            referenceInfo.DependsOn.Add(new ModelReference(model, field));
+            referenceInfo.Fields.Add(field.Reference.Field);
+            return field.Reference.Model;
+        }
+
+        return null;
     }
 
-    public void AddModelFields(IModel model, ModelReference modelRef, IReadOnlyList<IFieldDefinition> fields)
+    public void AddModelFields(IModel model, IReadOnlyList<IFieldDefinition> fields)
     {
         var info = GetInfo(model);
-        if(!modelRef.IsNone()) info.References.Add(modelRef);
         info.Fields.UnionWith(fields);
+        foreach (var field in fields)
+        {
+            if (field.Reference is not null)
+            {
+                var referenceInfo = GetInfo(field.Reference.Model);
+                referenceInfo.DependsOn.Add(new ModelReference(model, field));
+                referenceInfo.Fields.Add(field.Reference.Field);
+            }
+        }
     }
 
     public void AddFromStrings(IModel startModel, IModelBank bank, IReadOnlyList<string> strings)
@@ -327,38 +336,30 @@ public class SelectTree : Dictionary<IModel, SelectTreeModelInfo>, IDependencyCo
         {
             var currIndex = 0;
             int nextIndex;
-            var currModel = startModel;
+            IModel? currModel = startModel;
             IFieldDefinition? currField;
-            var currRef = ModelReference.None;
             while ((nextIndex = f.IndexOf('.', currIndex)) >= 0)
             {
+                if (currModel is null) throw new Exception(); //TODO
                 currField = startModel.GetFieldDefinition(f.AsSpan(currIndex, nextIndex));
                 if (currField is null) throw new Exception(); //TODO
-                if (currField.References is null) throw new Exception(); //TODO
-
-                var oldModel = currModel;
-                var oldRef = currRef;
-                currModel = bank.GetModel(currField.References.Model);
-                if (currModel is null) throw new Exception(); //TODO
+                currModel = AddModelField(currModel, currField);
                 
-                currRef = new ModelReference(oldModel.Name, currField.Name);
-                AddModelField(oldModel, oldRef, currField);
-                AddModelField(currModel, currRef, currModel.GetPrimaryKey());
                 currIndex = nextIndex + 1;
             }
 
+            if (currModel is null) throw new Exception(); //TODO
             currField = currModel.GetFieldDefinition(f.AsSpan(currIndex));
             if (currField is null) throw new Exception(); //TODO
-
-            AddModelField(currModel, currRef, currField);
+            AddModelField(currModel, currField);
         }
     }
 
     public IEnumerable<IModel> Enumerate() => Keys;
 
-    public IEnumerable<string> GetDependsOn(IModel named) => this[named].References.Select(mr => mr.Model);
+    public IEnumerable<string> GetDependsOn(IModel named) => this[named].DependsOn.Select(mr => mr.Model.Name);
 
-    public int GetDependsOnCount(IModel named) => this[named].References.Count;
+    public int GetDependsOnCount(IModel named) => this[named].DependsOn.Count;
 
     private SelectTreeModelInfo GetInfo(IModel model)
     {

@@ -1,10 +1,10 @@
 ﻿using Base;
-using Base.Fields;
+using ORM.Abstract;
 using ORM.Queries.Specifications;
 
-namespace ORM.Abstract;
+namespace ORM.ModelTypes;
 
-public interface IModel : INamed, IAttachable<Database>
+public interface IModel : INamed, IAttachable<IReadOnlyModelBank>
 {
     IReadOnlyList<string> GetAllAutoIncrementFieldsName();
     
@@ -17,12 +17,6 @@ public interface IModel : INamed, IAttachable<Database>
     public IFieldDefinition? GetFieldDefinition(ReadOnlySpan<char> name);
     
     public IReadOnlyCollection<IFieldDefinition> AllFieldDefinitions { get; }
-
-    public T Create<T>(IReadOnlyKeyValue<string, object?> values) where T : IRecord, new();
-
-    public T[] Create<T>(params IReadOnlyKeyValue<string, object?>[] values) where T : IRecord, new();
-
-    public List<T> Select<T>(QueryCondition? condition = null, params string[] fields) where T : IRecord, new();
 
     public IRecord InstantiateRecord();
 }
@@ -40,9 +34,9 @@ public static class ModelExtensions
             fieldSpecifications[i++] = new FieldSpecification(f.Name, f.GetDBFieldType(), 
                 f.Options.Unique, f.Options.Required, f.Options.AutoIncrement);
 
-            if (f.References is not null)
+            if (f.Reference is not null)
             {
-                fkSpecifications.Add(new ForeignKeySpecification(f.Name, f.References.Model, f.References.Field));
+                fkSpecifications.Add(new ForeignKeySpecification(f.Name, f.Reference.Model.Name, f.Reference.Field.Name));
             }
         }
 

@@ -28,6 +28,7 @@ public static class ModelDefinitionGenerator //TODO
         var sourceHeader = $$"""
         using ORM.Abstract;
         using ORM.RecordTypes;
+        using ORM.ModelTypes;
         
         namespace {{symbol.ContainingNamespace.ToDisplayString()}};
         

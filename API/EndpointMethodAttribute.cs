@@ -16,11 +16,11 @@ public static class EndpointMethod
     public static List<Endpoint> GetEndpoints(Type type)
     {
         List<Endpoint> endpoints = new();
-        foreach (var method in type.GetMethods())
+        foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.Public))
         {
             var attr = method.GetCustomAttribute<EndpointMethodAttribute>();
             if(attr is null) continue;
-
+            
             var parameters = method.GetParameters();
             var types = new Type[parameters.Length + 1];
             for (int i = 0; i < parameters.Length; i++)

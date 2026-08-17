@@ -1,5 +1,5 @@
 ﻿using API;
-using ORM.Abstract;
+using ORM.ModelTypes;
 using ORM.RecordTypes;
 
 namespace Bridge.ORM.API;
