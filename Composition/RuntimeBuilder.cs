@@ -29,7 +29,7 @@ public class RuntimeBuilder
 
         return new Runtime(
             new DictionaryModuleRegistry(),
-            new Database(_engine, new DictionaryModelBank()), 
+            new Database(_engine, new DictionaryModelRegistry()), 
             _api,
             _mapper);
     }

@@ -4,7 +4,7 @@ using ORM.Queries.Specifications;
 
 namespace ORM.ModelTypes;
 
-public interface IModel : INamed, IAttachable<IReadOnlyModelBank>
+public interface IModel : INamed, IAttachable<IReadOnlyModelRegistry>
 {
     IReadOnlyList<string> GetAllAutoIncrementFieldsName();
     
@@ -23,7 +23,7 @@ public interface IModel : INamed, IAttachable<IReadOnlyModelBank>
 
 public static class ModelExtensions
 {
-    public static CreateSpecification GenerateSpecification(this IModel model)
+    public static CreateSpecification GenerateCreateSpecification(this IModel model)
     {
         var fieldSpecifications = new FieldSpecification[model.AllFieldDefinitions.Count];
         var fkSpecifications = new List<ForeignKeySpecification>();

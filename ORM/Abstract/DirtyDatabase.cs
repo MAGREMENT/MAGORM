@@ -3,7 +3,7 @@ using ORM.Queries;
 
 namespace ORM.Abstract;
 
-public class DirtyDatabase(IDatabaseEngine engine, IModelBank modelBank) : Database(engine, modelBank)
+public class DirtyDatabase(IDatabaseEngine engine, ModelRegistry modelRegistry) : Database(engine, modelRegistry)
 {
     private readonly DirtyCollection _dirty = new();
     

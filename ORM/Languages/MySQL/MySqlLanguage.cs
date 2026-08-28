@@ -1,12 +1,12 @@
 ﻿using ORM.Abstract;
-using ORM.Queries;
+using ORM.Queries.Builder;
 using ORM.Queries.Common;
 
 namespace ORM.Languages.MySQL;
 
 public class MySqlLanguage : BaseSqlLanguage
 {
-    public override IQueryBuilder InitQueryBuilder() => new StackingQueryBuilder(this);
+    public override IScriptBuilder InitScriptBuilder() => new StackingScriptBuilder();
 
     protected override string TranslateDBFieldType(DBFieldType type)
     {

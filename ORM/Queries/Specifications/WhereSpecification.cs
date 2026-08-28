@@ -1,6 +1,7 @@
 ﻿namespace ORM.Queries.Specifications;
 
-public record WhereSpecification(WhereArgument Left, DBOperator Operator, WhereArgument Right);
+public record WhereSpecification(WhereArgument Left, DBOperator Operator, WhereArgument Right, 
+    IReadOnlyList<object?> Values);
 
 public readonly struct WhereArgument
 {

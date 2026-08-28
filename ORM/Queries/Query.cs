@@ -1,3 +1,3 @@
 ﻿namespace ORM.Queries;
 
-public record Query(string String, object?[] Parameters);
+public record Query(string String, IReadOnlyList<object?> Parameters);

@@ -1,4 +1,5 @@
 ﻿using ORM.Abstract;
+using ORM.Queries;
 
 namespace ORM.FieldDefinitions.ValueTypes;
 
@@ -7,24 +8,19 @@ public class BoolValueFieldDefinition(string name, FieldDefinitionsOptions optio
 {
     public override DBFieldType GetDBFieldType() => DBFieldType.BOOL;
     
-    public override bool TryConvert(object value, out object? result)
+    public override bool TryFetchFromQueryResult(IQueryResult result, string name, out object? value)
     {
-        switch (value)
+        bool success;
+        if (Options.Required)
         {
-            case long l : return TryConvertInt((int)l, out result);
-            case int i : return TryConvertInt(i, out result);
-            case bool b :
-                result = b;
-                return true;
-            default:
-                result = null;
-                return false;
+            success = result.TryGetBool(name, out var v);
+            value = v;
         }
-    }
-
-    private bool TryConvertInt(int value, out object? result)
-    {
-        result = value != 0;
-        return true;
+        else
+        {
+            success = result.TryGetNullableBool(name, out var nv);
+            value = nv;
+        }
+        return success;
     }
 }

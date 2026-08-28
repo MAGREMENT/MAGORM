@@ -6,10 +6,10 @@ public interface IQueryExecutor
 {
     public void ExecuteBufferedResult(IBufferedQueryResult result, Query query);
     public T ExecuteResult<T>(OnQueryResult<T> onResult, Query query);
-    public T ExecuteResult<T>(OnQueryResult<T> onResult, Query[] queries);
+    public T ExecuteResult<T>(OnQueryResult<T> onResult, IReadOnlyList<Query> queries);
     public object? ExecuteSingle(Query query);
     public void Execute(Query query);
-    public void Execute(Query[] queries);
+    public void Execute(IReadOnlyList<Query> queries);
 }
 
 public delegate T OnQueryResult<out T>(IQueryResult result);

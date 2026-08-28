@@ -1,4 +1,5 @@
 ﻿using ORM.Abstract;
+using ORM.Queries;
 
 namespace ORM.FieldDefinitions.ValueTypes;
 
@@ -7,16 +8,19 @@ public class StringValueFieldDefinition(string name, FieldDefinitionsOptions opt
 {
     public override DBFieldType GetDBFieldType() => DBFieldType.STRING;
     
-    public override bool TryConvert(object value, out object? result)
+    public override bool TryFetchFromQueryResult(IQueryResult result, string name, out object? value)
     {
-        switch (value)
+        bool success;
+        if (Options.Required)
         {
-            case string s :
-                result = s;
-                return true;
-            default:
-                result = null;
-                return false;
+            success = result.TryGetString(name, out var v);
+            value = v;
         }
+        else
+        {
+            success = result.TryGetNullableString(name, out var nv);
+            value = nv;
+        }
+        return success;
     }
 }

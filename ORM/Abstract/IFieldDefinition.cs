@@ -1,10 +1,11 @@
 ﻿using Base;
 using ORM.ModelTypes;
+using ORM.Queries;
 using ORM.Queries.Specifications;
 
 namespace ORM.Abstract;
 
-public interface IFieldDefinition : INamed, IAttachable<IReadOnlyModelBank>, ISelectFieldSpecification
+public interface IFieldDefinition : INamed, IAttachable<IReadOnlyModelRegistry>, ISelectFieldSpecification
 {
     public FieldDefinitionsOptions Options { get; }
 
@@ -12,8 +13,7 @@ public interface IFieldDefinition : INamed, IAttachable<IReadOnlyModelBank>, ISe
     
     public ModelReference? Reference { get; }
     
-    //TODO divide into CheckValueValidity and ComputeValue
-    public bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord;
+    public bool TryFetchFromQueryResult(IQueryResult result, string name, out object? value); //TODO a bit stupid to have to give name here, try to find better ?
 
     public object? ToDbValue(object? recordValue);
 }
@@ -22,9 +22,9 @@ public abstract class FieldDefinition : IFieldDefinition
 {
     public abstract string Name { get; }
 
-    public abstract void Attach(IReadOnlyModelBank obj);
+    public abstract void Attach(IReadOnlyModelRegistry obj);
 
-    public abstract void Detach(IReadOnlyModelBank obj);
+    public abstract void Detach(IReadOnlyModelRegistry obj);
 
     public abstract FieldDefinitionsOptions Options { get; }
 
@@ -32,13 +32,15 @@ public abstract class FieldDefinition : IFieldDefinition
 
     public abstract ModelReference? Reference { get; }
 
-    public abstract bool TryComputeValue<T>(object? value, T record, out object? result) where T : IRecord;
-    
+    public abstract bool TryFetchFromQueryResult(IQueryResult result, string name, out object? value);
+
     public abstract object? ToDbValue(object? recordValue);
 
     public string? Alias => null;
 
     public bool IsTableColumn => true;
+
+    public object? Value => null;
 
     public override bool Equals(object? obj)
     {

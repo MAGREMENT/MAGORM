@@ -10,12 +10,12 @@ public abstract class BufferedModel : IModel
     
     public abstract string Name { get; }
     
-    public virtual void Attach(IReadOnlyModelBank database)
+    public virtual void Attach(IReadOnlyModelRegistry database)
     {
         foreach(var field in AllFieldDefinitions) field.Attach(database);
     }
 
-    public void Detach(IReadOnlyModelBank obj)
+    public void Detach(IReadOnlyModelRegistry obj)
     {
         foreach(var field in AllFieldDefinitions) field.Detach(obj);
     }

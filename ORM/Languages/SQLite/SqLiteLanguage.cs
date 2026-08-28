@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using ORM.Abstract;
 using ORM.Queries;
+using ORM.Queries.Builder;
 using ORM.Queries.Common;
 
 namespace ORM.Languages.SQLite;
@@ -28,9 +29,9 @@ public class SqLiteLanguage : BaseSqlLanguage
         return base.IsSameDBFieldType(left, right);
     }
 
-    public override IQueryBuilder InitQueryBuilder() => new DividedQueriesBuilder(this);
+    public override IScriptBuilder InitScriptBuilder() => new DividedScriptsBuilder();
 
-    protected override void AddInsertFieldReturns(StringBuilder builder, ref int paramCount, InsertSpecification specification)
+    protected override void AddInsertFieldReturns(IScriptBuilder builder, InsertSpecification specification)
     {
         if (specification.ReturnedFields.Count == 0) return;
         

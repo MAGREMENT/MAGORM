@@ -27,7 +27,7 @@ public class Program
         }
 
         var db = new Database(new SQLiteDatabaseEngine("Data Source=example.db"),
-            new DictionaryModelBank());
+            new DictionaryModelRegistry());
 
         var author = new DictionaryApiModel("Author", Models.BasePrimaryKey, 
             Fields.String("Name"));

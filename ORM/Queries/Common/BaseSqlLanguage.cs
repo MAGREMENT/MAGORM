@@ -1,18 +1,21 @@
-﻿using System.Text;
-using ORM.Abstract;
+﻿using ORM.Abstract;
+using ORM.Queries.Builder;
 using ORM.Queries.Specifications;
 
 namespace ORM.Queries.Common;
 
 public abstract class BaseSqlLanguage : ISqlLanguage
 {
-    public void Create(StringBuilder builder, ref int paramCount, CreateSpecification specification)
+    public void Create(IScriptBuilder builder, CreateSpecification specification)
     {
         builder.Append($"CREATE TABLE {specification.Model} (\n");
 
         var pkDone = false;
+        var first = true;
         for(int i = 0; i < specification.Fields.Count; i++)
         {
+            if (first) first = false;
+            else builder.Append(", ");
             var f = specification.Fields[i];
             builder.Append($"    {f.Name} {TranslateDBFieldType(f.FieldType)}");
 
@@ -36,30 +39,34 @@ public abstract class BaseSqlLanguage : ISqlLanguage
                 builder.Append(' ');
                 builder.Append(AutoIncrementAttribute);
             }
-            builder.Append(",\n");
+            builder.Append("\n");
         }
 
         if (!pkDone)
         {
+            if (first) first = false;
+            else builder.Append(", ");
             builder.Append("    PRIMARY KEY (");
             foreach (var n in specification.PrimaryKey.Names)
             {
                 builder.Append(' ');
                 builder.Append(n);
             }
-            builder.Append("),\n");
+            builder.Append(")");
         }
-
+        
         foreach (var fk in specification.ForeignKeys)
         {
-            builder.Append($"    FOREIGN KEY ({fk.Field}) REFERENCES {fk.OtherModel}({fk.OtherField}),\n");
+            if (first) first = false;
+            else builder.Append(", ");
+            builder.Append($"    FOREIGN KEY ({fk.Field}) REFERENCES {fk.OtherModel}({fk.OtherField})");
         }
-
-        if(builder[^1] == '\n' && builder[^2] == ',') builder.Remove(builder.Length - 2, 2);
+        
         builder.Append(')');
+        builder.EndStatement();
     }
 
-    public void CreateFromSelect(StringBuilder builder, ref int paramCount, CreateFromSelectSpecification specification)
+    public void CreateFromSelect(IScriptBuilder builder, CreateFromSelectSpecification specification)
     {
         builder.Append("CREATE ");
         if (specification.IsTemporary)
@@ -70,10 +77,11 @@ public abstract class BaseSqlLanguage : ISqlLanguage
         builder.Append("TABLE ");
         builder.Append(specification.Name);
         builder.Append(" AS\n");
-        Select(builder, ref paramCount, specification.Select);
+        SelectInternal(builder, specification.Select);
+        builder.EndStatement();
     }
 
-    public void Insert(StringBuilder builder, ref int paramCount, InsertSpecification specification)
+    public void Insert(IScriptBuilder builder, InsertSpecification specification)
     {
         builder.Append($"INSERT INTO {specification.Model} (");
         for (int i = 0; i < specification.Fields.Count; i++)
@@ -83,20 +91,21 @@ public abstract class BaseSqlLanguage : ISqlLanguage
         }
 
         builder.Append(")\nVALUES (");
-        for (int i = 0; i < specification.Fields.Count; i++)
+        for (int i = 0; i < specification.Values.Count; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append(GetParameter(paramCount++));
+            builder.AppendParameter(specification.Values[i]);
         }
 
         builder.Append(')');
-        AddInsertFieldReturns(builder, ref paramCount, specification);
+        AddInsertFieldReturns(builder, specification);
+        builder.EndStatement();
     }
 
-    protected virtual void AddInsertFieldReturns(StringBuilder builder, ref int paramCount,
+    protected virtual void AddInsertFieldReturns(IScriptBuilder builder,
         InsertSpecification specification) {}
 
-    public void Update(StringBuilder builder, ref int paramCount, UpdateSpecification specification)
+    public void Update(IScriptBuilder builder, UpdateSpecification specification)
     {
         builder.Append($"UPDATE {specification.Model}\nSET");
 
@@ -106,13 +115,20 @@ public abstract class BaseSqlLanguage : ISqlLanguage
             if (i > 0) builder.Append(", ");
             builder.Append(specification.Fields[i]);
             builder.Append(" = ");
-            builder.Append(GetParameter(paramCount++));
+            builder.AppendParameter(specification.Values[i]);
         }
 
-        if (specification.Where is not null) Where(builder, ref paramCount, specification.Where);
+        if (specification.Where is not null) Where(builder, specification.Where);
+        builder.EndStatement();
     }
 
-    public void Select(StringBuilder builder, ref int paramCount, SelectSpecification specification)
+    public void Select(IScriptBuilder builder, SelectSpecification specification)
+    {
+        SelectInternal(builder, specification);
+        builder.EndStatement();
+    }
+
+    public void SelectInternal(IScriptBuilder builder, SelectSpecification specification)
     {
         builder.Append("SELECT ");
 
@@ -125,8 +141,8 @@ public abstract class BaseSqlLanguage : ISqlLanguage
                 if (isFirst) isFirst = false;
                 else builder.Append(", ");
 
-                if (field.IsTableColumn) builder.Append(field);
-                else builder.Append(GetParameter(paramCount++));
+                if (field.IsTableColumn) builder.Append(field.ToString()!);
+                else builder.AppendParameter(field.Value);
 
                 if (field.Alias is not null)
                 {
@@ -138,7 +154,7 @@ public abstract class BaseSqlLanguage : ISqlLanguage
 
         builder.Append($"\nFROM {specification.Model}");
 
-        if (specification.Where is not null) Where(builder, ref paramCount, specification.Where);
+        if (specification.Where is not null) Where(builder, specification.Where);
         if (specification.OrderBy is not null && specification.OrderBy.Length > 0)
         {
             builder.Append("\nORDER BY");
@@ -148,22 +164,29 @@ public abstract class BaseSqlLanguage : ISqlLanguage
                 if (i > 0) builder.Append(", ");
                 builder.Append(specification.OrderBy[i].Field);
                 builder.Append(' ');
-                builder.Append(specification.OrderBy[i].Type);
+                builder.Append(specification.OrderBy[i].Type.ToString());
             }
         }
     }
 
-    public void Delete(StringBuilder builder, ref int paramCount, DeleteSpecification specification)
+    public void Delete(IScriptBuilder builder, DeleteSpecification specification)
     {
         builder.Append("DELETE FROM ");
         builder.Append(specification.Model);
-        if (specification.Where is not null) Where(builder, ref paramCount, specification.Where);
+        if (specification.Where is not null) Where(builder, specification.Where);
+        builder.EndStatement();
     }
 
-    public void Drop(StringBuilder builder, ref int paramCount, string name)
+    public void Drop(IScriptBuilder builder, string name)
     {
         builder.Append("DROP TABLE ");
         builder.Append(name);
+        builder.EndStatement();
+    }
+
+    public virtual bool Nuke(IScriptBuilder builder)
+    {
+        return false;
     }
 
     public virtual bool IsSameDBFieldType(DBFieldType left, DBFieldType right)
@@ -171,30 +194,31 @@ public abstract class BaseSqlLanguage : ISqlLanguage
         return left == right;
     }
 
-    public abstract IQueryBuilder InitQueryBuilder();
+    public abstract IScriptBuilder InitScriptBuilder();
 
-    private void Where(StringBuilder builder, ref int paramCount, WhereSpecification specification)
+    private void Where(IScriptBuilder builder, WhereSpecification specification)
     {
         builder.Append("\nWHERE");
-        AddWhere(builder, ref paramCount, specification);
+        AddWhere(builder, specification);
     }
 
     //TODO limit parenthesis more
-    private void AddWhere(StringBuilder builder, ref int paramCount, WhereSpecification specification)
+    private void AddWhere(IScriptBuilder builder, WhereSpecification specification)
     {
+        var i = 0;
         builder.Append(' ');
         if(specification.Left.Type == WhereArgumentType.ARGUMENT) builder.Append('(');
-        WhereArgument(builder, ref paramCount, specification.Left);
+        WhereArgument(builder, specification.Left, specification.Values, ref i);
         if(specification.Left.Type == WhereArgumentType.ARGUMENT) builder.Append(')');
         builder.Append(' ');
         builder.Append(GetOperator(specification.Operator));
         builder.Append(' ');
         if(specification.Right.Type == WhereArgumentType.ARGUMENT) builder.Append('(');
-        WhereArgument(builder, ref paramCount, specification.Right);
+        WhereArgument(builder, specification.Right, specification.Values, ref i);
         if(specification.Right.Type == WhereArgumentType.ARGUMENT) builder.Append(')');
     }
 
-    private void WhereArgument(StringBuilder builder, ref int paramCount, WhereArgument argument)
+    private void WhereArgument(IScriptBuilder builder, WhereArgument argument, IReadOnlyList<object?> parameters, ref int i)
     {
         switch (argument.Type)
         {
@@ -202,17 +226,12 @@ public abstract class BaseSqlLanguage : ISqlLanguage
                 builder.Append(argument.Text);
                 break;
             case WhereArgumentType.ARGUMENT :
-                AddWhere(builder, ref paramCount, argument.Argument);
+                AddWhere(builder, argument.Argument);
                 break;
             case WhereArgumentType.PARAMETER :
-                builder.Append(GetParameter(paramCount++));
+                builder.AppendParameter(parameters[i++]);
                 break;
         }
-    }
-
-    protected virtual string GetParameter(int paramCount)
-    {
-        return "@" + paramCount;
     }
 
     protected string GetOperator(DBOperator @operator)

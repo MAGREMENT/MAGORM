@@ -1,6 +1,7 @@
 ﻿using ORM;
 using ORM.Abstract;
 using ORM.Languages;
+using ORM.Queries.Builder;
 using ORM.RecordTypes;
 using ORM.SQLite.Microsoft;
 using MissingFieldException = ORM.Abstract.MissingFieldException;
@@ -16,7 +17,7 @@ public class DatabaseTests
     {
         _databases.Add(new Database(
             new SQLiteDatabaseEngine("Data Source=test.db"), 
-            new DictionaryModelBank()));
+            new DictionaryModelRegistry()));
         
         foreach (var d in _databases)
         {

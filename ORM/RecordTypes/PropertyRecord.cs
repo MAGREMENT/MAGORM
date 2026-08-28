@@ -2,6 +2,7 @@
 using Base.Fields.Implementations;
 using ORM.Abstract;
 using ORM.ModelTypes;
+using ORM.Util;
 
 namespace ORM.RecordTypes;
 
@@ -49,7 +50,6 @@ public static class ModelGenerator
 public class ModelFieldAttribute : FieldAttribute
 {
     public bool Primary { get; set; }
-    public bool Required { get; set; }
     public bool Unique { get; set; }
     public bool AutoIncrement { get; set; }
 }
@@ -66,7 +66,7 @@ public static class ModelField
             var attr = prop.GetCustomAttribute<ModelFieldAttribute>();
             if(attr is null) continue;
 
-            var options = new FieldDefinitionsOptions(attr.Required, attr.Unique, attr.AutoIncrement);
+            var options = new FieldDefinitionsOptions(!prop.IsTypeNullable(), attr.Unique, attr.AutoIncrement);
             IFieldDefinition field;
             if (prop.PropertyType == typeof(int)) field = Fields.Int(prop.Name, options);
             else if (prop.PropertyType == typeof(string)) field = Fields.String(prop.Name, options);

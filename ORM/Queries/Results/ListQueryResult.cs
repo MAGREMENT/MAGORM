@@ -56,6 +56,36 @@ public class ListQueryResult : IBufferedQueryResult
         throw new NotImplementedException();
     }
 
+    public bool TryGetNullableInt(string name, out int? value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGetInt(string name, out int value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGetNullableString(string name, out string? value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGetString(string name, out string value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGetNullableBool(string name, out bool? value)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool TryGetBool(string name, out bool value)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Dispose()
     {
         

@@ -28,16 +28,11 @@ public static class Conditions
 
 public record QueryCondition(object? Left, DBOperator Operator, object? Right)
 {
-    public (WhereSpecification, List<object?>) Compile()
+    public WhereSpecification Compile(List<object?>? parameters = null)
     {
-        var parameters = new List<object?>();
-        var spec = Compile(parameters);
-        return (spec, parameters);
-    }
-
-    private WhereSpecification Compile(List<object?> parameters)
-    {
-        return new WhereSpecification(GetArgument(Left, parameters), Operator, GetArgument(Right, parameters));
+        parameters ??= new List<object?>();
+        return new WhereSpecification(GetArgument(Left, parameters), Operator, GetArgument(Right, parameters),
+            parameters);
     }
 
     private WhereArgument GetArgument(object? obj, List<object?> parameters)

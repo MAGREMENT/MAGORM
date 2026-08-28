@@ -1,4 +1,5 @@
 ﻿using ORM.Abstract;
+using ORM.Queries;
 
 namespace ORM.FieldDefinitions;
 
@@ -19,12 +20,11 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
         return _reference.Field.GetDBFieldType();
     }
 
-    public override bool TryComputeValue<T>(object? value, T record, out object? result)
+    public override bool TryFetchFromQueryResult(IQueryResult result, string name, out object? value)
     {
         if (_reference is null) throw new ArgumentException(); //TODO
 
-        if (value is IRecord otherRecord) value = otherRecord.Get(_reference.Field.Name);
-        return _reference.Field.TryComputeValue(value, record, out result);
+        return _reference.Field.TryFetchFromQueryResult(result, name, out value);
     }
 
     public override object? ToDbValue(object? recordValue)
@@ -35,7 +35,7 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
         return otherRecord.Get(_reference.Field.Name);
     }
 
-    public override void Attach(IReadOnlyModelBank obj)
+    public override void Attach(IReadOnlyModelRegistry obj)
     {
         if (_reference is not null) throw new Exception("Field already attached");
         
@@ -51,7 +51,7 @@ public class ReferenceFieldDefinition(string name, string _otherModelName, Field
         _reference = new ModelReference(otherModel, field);
     }
 
-    public override void Detach(IReadOnlyModelBank obj)
+    public override void Detach(IReadOnlyModelRegistry obj)
     {
         _reference = null;
     }

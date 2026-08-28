@@ -10,7 +10,7 @@ public class PropertyRecordTests
         var book = new Book();
         var model = book.GetModel();
         Assert.That(model, Is.Not.Null);
-        Assert.That(model.AllFieldDefinitions, Has.Count.EqualTo(3));
+        Assert.That(model.AllFieldDefinitions, Has.Count.EqualTo(3)); //TODO test better
     }
 }
 
@@ -20,8 +20,7 @@ public partial class Book : ModelDefiner
     [ModelField(Primary = true, AutoIncrement = true)]
     public int Id { get; set; }
     
-    [ModelField(Required = true)]
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; } = string.Empty;
     
     [ModelField(Unique = true)]
     public int Number { get; set; }

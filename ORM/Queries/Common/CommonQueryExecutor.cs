@@ -46,7 +46,7 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         TResult result;
         using (var cmd = SetupCommand(query, con))
         {
-            using var queryResult = new DbDataReaderQueryResult(cmd.ExecuteReader());
+            using var queryResult = new SingleDbDataReaderQueryResult(cmd.ExecuteReader());
             result = onResult(queryResult);
         }
         
@@ -55,15 +55,15 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         return result;
     }
 
-    public TResult ExecuteResult<TResult>(OnQueryResult<TResult> onResult, Query[] queries)
+    public TResult ExecuteResult<TResult>(OnQueryResult<TResult> onResult, IReadOnlyList<Query> queries)
     {
-        if (queries.Length == 1) return ExecuteResult(onResult, queries[0]);
+        if (queries.Count == 1) return ExecuteResult(onResult, queries[0]);
         
         var con = CreateConnection();
         con.Open();
         
-        var cmds = new DbCommand[queries.Length];
-        for (int i = 0; i < queries.Length; i++)
+        var cmds = new DbCommand[queries.Count];
+        for (int i = 0; i < queries.Count; i++)
         {
             cmds[i] = SetupCommand(queries[i], con);
         }
@@ -107,7 +107,7 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
         if(ShouldDisposeOfConnection) con.Dispose();
     }
 
-    public void Execute(Query[] queries)
+    public void Execute(IReadOnlyList<Query> queries)
     {
         var con = CreateConnection();
         con.Open();
@@ -125,7 +125,7 @@ public abstract class CommonQueryExecutor<T> : IQueryExecutor
     {
         var cmd = CreateCommand(query.String, con);
 
-        for (int i = 0; i < query.Parameters.Length; i++)
+        for (int i = 0; i < query.Parameters.Count; i++)
         {
             var p = cmd.CreateParameter();
             p.ParameterName = "@" + i;
@@ -148,6 +148,7 @@ public abstract class CommonDatabaseEngine<T>
     public abstract ITransaction CreateTransaction();
 
     public abstract IReadOnlyList<CreateSpecification> GetModelSchemas();
+    
     public abstract void DropAllTables(); //TODO should probably move part of this to the corresponding ISqlLanguage
 }
 
