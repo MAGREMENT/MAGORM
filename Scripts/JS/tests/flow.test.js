@@ -20,6 +20,9 @@ await suite("Basic Tests", [
     })
 ]);
 
+//TODO things to resolve :
+//- count is '10' at component initialization instead of 10
+//- updater are called on context element, like 'user' here
 class ExempleComponent extends Component {
     constructor({count = 5}) {
         super();
@@ -41,6 +44,10 @@ class ExempleComponent extends Component {
         this.currentUserIdx = (this.currentUserIdx + 1) % this.users.length;
     }
 
+    addUser() {
+        this.users.push({name: "Philippe"});
+    }
+
     get currentUser() {
         return this.users[this.currentUserIdx].name;
     }
@@ -53,7 +60,7 @@ const exempleHtml = `
         Number: {{count}}
     </p>
     <!--This is a comment-->
-    <button @click="increase">
+    <button id="increase" @click="increase">
         Increase
     </button>
     <p class="someClass" *for="user" *of="users">
@@ -64,7 +71,8 @@ const exempleHtml = `
     </p>
     <button id="showToggle" @click="toggleShow">Show</button>       
     <input :value="currentUser">Current User</a>
-    <button id="userChange" @click="nextUser">Change user</button>                       
+    <button id="userChange" @click="nextUser">Change user</button>
+    <button id="addUser" @click="addUser">Add user</button>                    
 </div>`
 
 await addComponent(ExempleComponent, exempleHtml);
@@ -85,7 +93,7 @@ await suite("Basic Flows", [
                 trim: true,
             }, 
             {
-                find: "button",
+                find: "#increase",
                 click: true,
             },
             {
@@ -139,11 +147,25 @@ await suite("Basic Flows", [
             },
         ])
     }),
-    test("for loop first render", (context) => { //TODO maybe to runSteps with find that returns multiple and if so, multiple content check ?
-        const list = context.dom.querySelectorAll(".someClass")
-        assert.equal(list.length, 2);
-        assert.equal(list[0].textContent.trim(), "Hey Jeanne")
-        assert.equal(list[1].textContent.trim(), "Hey Bernard")
+    test("for loop", (context) => {
+        return runSteps(context.dom, [
+            {
+                find: ".someClass",
+                multiple: true, //TODO with count check
+                content: ["Hey Jeanne", "Hey Bernard"],
+                trim: true
+            },
+            {
+                find: "#addUser",
+                click: true,
+            },
+            {
+                find: ".someClass",
+                multiple: true,
+                content: ["Hey Jeanne", "Hey Bernard", "Hey Philippe"],
+                trim: true
+            }
+        ])
     })
 ], {
     setup: generateSetupDom(testHtml1),

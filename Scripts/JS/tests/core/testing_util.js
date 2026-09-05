@@ -12,29 +12,39 @@ export function generateSetupDom(html) {
 }
 
 export async function runSteps(html, steps) {
+    const wrapInArray = el => Array.isArray(el) ? el : [el]
     for(const step of steps) {
-        const element = html.querySelector(step.find || step.dontFind)
-        if(step.find) {
-            if(!element) fail("Did not find element : " + step.find)
-        } else if(element) fail("Did find element : " + step.dontFind);
-        
+        const elements = html.querySelectorAll(step.find || step.dontFind)
+        if(step.dontFind) {
+            if(elements.length > 0) fail("Did find element : " + step.dontFind);
+            continue;
+        }
 
-        if(step.click) {
-            await element.click();
+        if(elements.length == 0) fail("Did not find element(s) : " + step.find);
+        if(!step.multiple) {
+            if(elements.length > 1) fail("Found more than one element : " + step.find)
+            
+            const element = elements[0];
+            if(step.click) {
+                await element.click();
+            }
         }
 
         if(step.content) {
-            let toCheck = element.textContent;
-            let expected = step.content;
-            if(step.trim) {
-                toCheck = toCheck.trim();
-                expected = expected.trim();
-            }
-            assert.equal(toCheck, expected);
+            wrapInArray(step.content).forEach((expected, i) => {
+                let toCheck = elements[i].textContent;
+                if(step.trim) {
+                    toCheck = toCheck.trim();
+                    expected = expected.trim();
+                }
+                assert.equal(toCheck, expected);
+            });
         }
 
         if(step.attribute) {
-            assert.equal(element[step.attribute.name], step.attribute.content)
+            wrapInArray(step.attribute).forEach((attr, i) => {
+                assert.equal(elements[i][attr.name], attr.content)
+            });
         }
     }
 }

@@ -29,6 +29,7 @@ export class Template {
         this.updatePolicy = policy;
         for(const binding of this.bindings) {
             if(binding.updatePolicy) binding.updatePolicy = policy;
+            //TODO binding.template could also have bindings with a template...
             if(binding.template) binding.template.setUpdatePolicy(policy);
         }
     }
@@ -100,34 +101,43 @@ export class Template {
     }
 }
 
-class TextBinding { //TODO optimize, divide into multiple text nodes
+//TODO remove path from constructor
+class TextBinding {
     constructor(path, divided) {
         this.path = path;
         this.divided = divided;
     }
 
     render(element, component, context) {
-        element.textContent = this.getTextValue(component, context);
+        let curr = element;
         for(const te of this.divided) {
-            if(te.getReferences) {
+            let newElement;
+            if(te.evaluate) {
+                newElement = document.createTextNode(te.evaluate(component, context));
                 for(const ref of te.getReferences()) {
-                    component.addUpdater(ref, element, this);
+                    component.addUpdater(ref, newElement, new TextExpressionUpdater(te));
                 }
-            }
+            } else newElement = document.createTextNode(te);
+
+            curr.after(newElement);
+            curr = newElement;
         }
+        element.remove();
+    }
+
+}
+
+class TextExpressionUpdater {
+    constructor(expression) {
+        this.expression = expression;
     }
 
     update(element, component, context) {
-        element.textContent = this.getTextValue(component, context);
-        return element;
-    }
-
-    getTextValue(component, context) {
-        return this.divided.map(d => d.evaluate ? d.evaluate(component, context) : d).join("");
+        element.textContent = this.expression.evaluate(component, context);
     }
 }
 
-function divideTextNode(text) { //TODO probably remove text_expression
+function divideTextNode(text) {
     let startIndex = 0;
     const result = [];
 
@@ -164,6 +174,7 @@ class EventBinding {
     }
 }
 
+//TODO add *key for tracking
 class LoopBinding {
     constructor(path, condition, element, updatePolicy) {
         this.path = path;
@@ -173,17 +184,53 @@ class LoopBinding {
 
     render(element, component, context) {
         const iterable = component[this.condition.ofValue];
-        let ctxCopy = {...context}
         let curr = element;
+        let key = 0;
         for(const el of iterable) {
-            ctxCopy[this.condition.forValue] = el;
-            let newElement = this.template.render(component, ctxCopy);
-            curr.insertAdjacentElement("afterend", newElement);
-            curr = newElement;
+            curr = addElement(this.template, component, context, this.condition, el, key++, curr);
         }
         const comment = document.createComment(`for ${this.condition.forValue} of ${this.condition.ofValue}`)
         element.replaceWith(comment)
+        component.addUpdater(this.condition.ofValue, comment, new LoopUdpater(this.condition, this.template));
     }
+}
+
+class LoopUdpater {
+    constructor(condition, template) {
+        this.condition = condition;
+        this.template = template;
+    }
+
+    //TODO iterable can come from the context, same for other bindings
+    update(element, component, context) {
+        const iterator = component[this.condition.ofValue][Symbol.iterator]();
+        let curr = element;
+        let key = 0;
+
+        let next = iterator.next();
+        while(!next.done) {
+            curr = curr.nextElementSibling;
+            if(!curr || curr.__key === undefined) {
+                break;
+            }
+            if(curr.__key !== key++) {
+                //TODO fill
+            }
+            next = iterator.next();
+        }
+
+        while(!next.done) {
+            curr = addElement(this.template, component, context, this.condition, next.value, key++, curr);
+            next = iterator.next();
+        }
+    }
+}
+
+function addElement(template, component, context, condition, el, key, curr) {
+    let newElement = template.render(component, {...context, [condition.forValue]: el});
+    newElement.__key = key;
+    curr.insertAdjacentElement("afterend", newElement);
+    return newElement;
 }
 
 class ConditionBinding {

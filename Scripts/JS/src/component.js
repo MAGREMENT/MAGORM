@@ -4,6 +4,7 @@ export class Component {
         this.template.updatePolicy.onTemplateAttached(this);
 
         this.root = template.render(this);
+        this.root.__component = this;
         this.onRender();
     }
 
@@ -11,6 +12,7 @@ export class Component {
         const newRoot = this.template.render(this);
         this.root.replaceWith(newRoot);
         this.root = newRoot;
+        this.root.__component = this;
         this.onRender();
     }
 
