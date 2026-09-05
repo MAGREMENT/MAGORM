@@ -1,10 +1,10 @@
-import { applyComponents, setUpdatePolicy } from "../../src/main.js";
+import { applyComponents, setPolicies } from "../../src/main.js";
 import { stringToDom } from "../../src/util.js";
 import { assert, fail } from "./testing.js";
 
 export function generateSetupDom(html) {
     return async (context) => {
-        if(context.updatePolicy) setUpdatePolicy(context.updatePolicy);
+        if(context.policies) setPolicies(context.policies);
         const dom = stringToDom(html);
         applyComponents(dom);
         return { dom }

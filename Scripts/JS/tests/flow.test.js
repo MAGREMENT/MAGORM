@@ -3,7 +3,8 @@ import { suite, test, assert, fail } from "./core/testing.js";
 import { addComponent, applyComponents } from "../src/main.js";
 import { stringToDom } from "../src/util.js";
 import { generateSetupDom, runSteps } from "./core/testing_util.js";
-import { RenderOnEvent, UpdateOnEvent } from "../src/update_policy.js";
+import { RenderOnEvent, UpdateOnEvent } from "../src/policies/update_policy.js";
+import { Policies } from "../src/policies/policies.js";
 
 class EmptyComponent extends Component {}
 const emptyHtml = "<p>Beautiful</p>";
@@ -170,7 +171,7 @@ await suite("Basic Flows", [
 ], {
     setup: generateSetupDom(testHtml1),
     runs: [
-        { runName: "RenderOnEvent policy", updatePolicy: new RenderOnEvent()},
-        { runName: "UpdateOnEvent render", updatePolicy: new UpdateOnEvent()}
+        { runName: "RenderOnEvent policy", policies: new Policies(new RenderOnEvent(), null)},
+        { runName: "UpdateOnEvent render", policies: new Policies(new UpdateOnEvent(), null)}
     ]
 })

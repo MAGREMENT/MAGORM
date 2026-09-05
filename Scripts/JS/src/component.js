@@ -1,7 +1,7 @@
 export class Component {
     attachTemplate(template) {
         this.template = template;
-        this.template.updatePolicy.onTemplateAttached(this);
+        this.template.policies.update.onTemplateAttached(this);
 
         this.root = template.render(this);
         this.root.__component = this;
@@ -21,6 +21,6 @@ export class Component {
     }
 
     addUpdater(property, element, updater) {
-        this.template.updatePolicy.addUpdater(this, property, element, updater);
+        this.template.policies.update.addUpdater(this, property, element, updater);
     }
 }

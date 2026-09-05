@@ -98,6 +98,4 @@ function compareEqualityValue(objValue, equalityValue) {
     return length === equalityValue.children.size && compareEquality(objValue, equalityValue.children)
 }
 
-export const defaultUpdatePolicy = new UpdateOnEvent();
-
 //TODO Other policies(React like setValue, Proxy, Object.define properties, ...)

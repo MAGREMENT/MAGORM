@@ -48,8 +48,8 @@ export async function addComponent(component, html = null) {
     customElements.define(tagName, Dummy);
 }
 
-export function setUpdatePolicy(policy) {
+export function setPolicies(policies) {
     for(const info of component_registry.values()) {
-        info.template.setUpdatePolicy(policy);
+        info.template = info.template.copy({policies});
     }
 }

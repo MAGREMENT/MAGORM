@@ -1,17 +1,21 @@
 import { walkDom, getDomNode, stringToDom } from "./util.js";
-import { defaultUpdatePolicy } from "./update_policy.js";
 import { toExpression } from "./expression.js";
+import { defaultPolicies } from "./policies/policies.js";
 
 export class Template {
     constructor(html, {
-        updatePolicy = defaultUpdatePolicy, 
+        policies = defaultPolicies, 
         bindRoot = true,
         rootAttributesToRemove = [],
     } = {}) {
         this.html = html;
-        this.bindings = Template.getBindings(this.html, {updatePolicy: this.updatePolicy, bindRoot: bindRoot})
-        this.updatePolicy = updatePolicy;
+        this.bindings = Template.getBindings(this.html, {policies: policies, bindRoot: bindRoot})
+        this.policies = policies;
         this.rootAttributesToRemove = rootAttributesToRemove;
+    }
+
+    copy({policies}) {
+        return new Template(this.html, {policies: policies ?? this.policies, rootAttributesToRemove: this.rootAttributesToRemove})
     }
 
     render(component, context = {}) {
@@ -20,18 +24,8 @@ export class Template {
             html.removeAttribute(attrName);
         }
 
-        Template.applyBindings(html, this.bindings, component, context, {updatePolicy: this.updatePolicy})
+        Template.applyBindings(html, this.bindings, component, context)
         return html;
-    }
-
-    //TODO probably bad design, would be better if bindings referenced the policy of the template => use updatePolicyProxy instead
-    setUpdatePolicy(policy) {
-        this.updatePolicy = policy;
-        for(const binding of this.bindings) {
-            if(binding.updatePolicy) binding.updatePolicy = policy;
-            //TODO binding.template could also have bindings with a template...
-            if(binding.template) binding.template.setUpdatePolicy(policy);
-        }
     }
 
     static async fromFile(path) {
@@ -42,7 +36,7 @@ export class Template {
         return new Template(this.html);
     }
 
-    static getBindings(html, {bindRoot = true, updatePolicy = defaultUpdatePolicy} = {}) {
+    static getBindings(html, {bindRoot = true, policies = defaultPolicies} = {}) {
         const result = [];
         walkDom(html, (el, path) => {
             let skipChildren = false;
@@ -61,7 +55,7 @@ export class Template {
                         result.push(new EventBinding([...path], {
                             name: attr.name.substring(1),
                             expression: attr.value
-                        }, updatePolicy));
+                        }, policies));
                     }
                     else if(attr.name[0] === "*") {
                         attrName = attr.name.substring(1);
@@ -70,7 +64,7 @@ export class Template {
                         
                     }
                     else if(attr.name[0] === "?") {
-                        result.push(new ConditionBinding([...path], attr.value, el, updatePolicy));
+                        result.push(new ConditionBinding([...path], attr.value, el, policies));
                         skipChildren = true;
                     }
                     else if(attr.name[0] === ':') {
@@ -82,7 +76,7 @@ export class Template {
                     result.push(new LoopBinding([...path], {
                         forValue: forValue,
                         ofValue: ofValue
-                    }, el, updatePolicy));
+                    }, el, policies));
                     skipChildren = true;
                 }
             }
@@ -91,7 +85,7 @@ export class Template {
         return result;
     }
 
-    static applyBindings(html, bindings, component, context, {updatePolicy = defaultUpdatePolicy} = {}) {
+    static applyBindings(html, bindings, component, context) {
         let elements = bindings.map(binding => getDomNode(html, binding.path, {htmlOnly: false}));
         for(let i = 0; i < bindings.length; i++) {
             let element = elements[i];
@@ -163,23 +157,23 @@ function divideTextNode(text) {
 }
 
 class EventBinding {
-    constructor(path, event, updatePolicy) {
+    constructor(path, event, policies) {
         this.path = path;
         this.event = event;
-        this.updatePolicy = updatePolicy;
+        this.policies = policies;
     }
 
     render(element, component, context) {
-        element.addEventListener(this.event.name, (ev) => this.updatePolicy.callEvent(component, this.event.expression, ev));
+        element.addEventListener(this.event.name, (ev) => this.policies.update.callEvent(component, this.event.expression, ev));
     }
 }
 
 //TODO add *key for tracking
 class LoopBinding {
-    constructor(path, condition, element, updatePolicy) {
+    constructor(path, condition, element, policies) {
         this.path = path;
         this.condition = condition;
-        this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["*for", "*of"]})
+        this.template = new Template(element, {policies, bindRoot: false, rootAttributesToRemove: ["*for", "*of"]})
     }
 
     render(element, component, context) {
@@ -234,10 +228,10 @@ function addElement(template, component, context, condition, el, key, curr) {
 }
 
 class ConditionBinding {
-    constructor(path, conditionName, element, updatePolicy) {
+    constructor(path, conditionName, element, policies) {
         this.path = path;
         this.conditionName = conditionName;
-        this.template = new Template(element, {updatePolicy, bindRoot: false, rootAttributesToRemove: ["?if"]})
+        this.template = new Template(element, {policies, bindRoot: false, rootAttributesToRemove: ["?if"]})
     }
 
     render(element, component, context) {
